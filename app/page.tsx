@@ -1,12 +1,6 @@
-import Image from "next/image";
+import ChatWindow from "@/components/ChatWindow";
 
 export default function Home() {
-  return (
-    
-      <main>
-        <h1>Hello AITurf</h1>
-        <button>Chat Bot</button>
-      </main>
-    
-  );
+  return <ChatWindow />;
 }
+
