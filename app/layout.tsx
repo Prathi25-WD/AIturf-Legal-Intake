@@ -2,18 +2,24 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AITurf Legal Intake",
-  description: "Client Intake Bot",
+  title: "K.T. Dakappa & Associates — Client Intake",
+  description: "AI-powered legal intake — Powered by AITurf",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en">
+      <head>
+        <script
+          src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+          async
+        />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }
