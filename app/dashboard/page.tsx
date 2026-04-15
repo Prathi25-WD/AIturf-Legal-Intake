@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import React from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 /*
   K.T. Dakappa & Associates — Staff Dashboard
   
@@ -53,10 +54,10 @@ const formatTime = (h: number, m: number) => {
 };
 
 const intakeBriefs:Brief[]= [
-  { id: 1, clientName: "Smt. Lakshmi Devi", phone: "98451 XXXXX", type: "Property — Title Dispute", urgency: "high", submittedAt: "3:42 PM", status: "new", summary: "Claims ownership of site in Banashankari based on registered sale deed (2019). Seller's son now claiming property based on an alleged will. Client has possession.", limitationStatus: "safe", limitationDate: "Mar 2028", court: "City Civil Court, Bangalore" },
-  { id: 2, clientName: "Sri. Ramesh B.N.", phone: "99020 XXXXX", type: "Family — Succession", urgency: "medium", submittedAt: "1:15 PM", status: "new", summary: "Father expired 4 months ago without a will. 3 legal heirs (2 sons, 1 daughter). Assets: house in Jayanagar + 2 acres agricultural land in Mandya. Siblings disagree on division.", limitationStatus: "safe", limitationDate: "N/A — no strict limit", court: "City Civil Court, Bangalore" },
-  { id: 3, clientName: "M/s. Priya Enterprises", phone: "80951 XXXXX", type: "Rent — Commercial Eviction", urgency: "high", submittedAt: "11:30 AM", status: "reviewed", summary: "Commercial tenant in Basavanagudi shop, rent unpaid for 8 months (₹35,000/month = ₹2.8L arrears). Written rent agreement exists. Tenant claims shop needs repairs.", limitationStatus: "safe", limitationDate: "Per Karnataka Rent Act", court: "Small Causes Court" },
-  { id: 4, clientName: "Sri. Venkatesh K.", phone: "97310 XXXXX", type: "Documentation — Legal Opinion", urgency: "low", submittedAt: "Yesterday", status: "assigned", assignedTo: "Bhoomika", summary: "Wants legal opinion on agricultural land purchase in Kanakapura taluk. Needs RTC verification, EC check, and conversion feasibility assessment.", limitationStatus: "n/a", limitationDate: "N/A", court: "N/A" },
+  { id: "1", clientName: "Smt. Lakshmi Devi", phone: "98451 XXXXX", type: "Property — Title Dispute", urgency: "high", submittedAt: "3:42 PM", status: "new", summary: "Claims ownership of site in Banashankari based on registered sale deed (2019). Seller's son now claiming property based on an alleged will. Client has possession.", limitationStatus: "safe", limitationDate: "Mar 2028", court: "City Civil Court, Bangalore" },
+  { id: "2", clientName: "Sri. Ramesh B.N.", phone: "99020 XXXXX", type: "Family — Succession", urgency: "medium", submittedAt: "1:15 PM", status: "new", summary: "Father expired 4 months ago without a will. 3 legal heirs (2 sons, 1 daughter). Assets: house in Jayanagar + 2 acres agricultural land in Mandya. Siblings disagree on division.", limitationStatus: "safe", limitationDate: "N/A — no strict limit", court: "City Civil Court, Bangalore" },
+  { id: "3", clientName: "M/s. Priya Enterprises", phone: "80951 XXXXX", type: "Rent — Commercial Eviction", urgency: "high", submittedAt: "11:30 AM", status: "reviewed", summary: "Commercial tenant in Basavanagudi shop, rent unpaid for 8 months (₹35,000/month = ₹2.8L arrears). Written rent agreement exists. Tenant claims shop needs repairs.", limitationStatus: "safe", limitationDate: "Per Karnataka Rent Act", court: "Small Causes Court" },
+  { id: "4", clientName: "Sri. Venkatesh K.", phone: "97310 XXXXX", type: "Documentation — Legal Opinion", urgency: "low", submittedAt: "Yesterday", status: "assigned", assignedTo: "Bhoomika", summary: "Wants legal opinion on agricultural land purchase in Kanakapura taluk. Needs RTC verification, EC check, and conversion feasibility assessment.", limitationStatus: "n/a", limitationDate: "N/A", court: "N/A" },
 ];
 
 const upcomingDeadlines = [
@@ -94,7 +95,7 @@ type UrgencyLevel =
   | "n_a";
 
   type Brief = {
-  id: number;
+  id: string;
   clientName: string;
   phone:string;
   urgency: UrgencyLevel;   
@@ -211,20 +212,207 @@ function TodaySummary() {
     </Card>
   );
 }
+function NewEntriesCard() {
+  const [entries, setEntries] = useState<any[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchEntries = async () => {
+      const { data, error } = await supabase
+        .from("intake_briefs")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching entries:", error);
+      } else {
+        setEntries(data);
+      }
+    };
+
+    fetchEntries();
+  }, []);
+
+  return (
+    <div style={{ maxHeight: 280, overflowY: "auto" }}>
+      <SectionHeader icon="🆕" title="New Entries" count={entries.length} />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {entries.map((entry) => (
+          <Card key={entry.id}>
+            {/* Top row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>
+                {entry.client_name || "Unnamed Client"}
+              </span>
+
+              <button
+                onClick={() => window.open(`/intake/${entry.id}`, "_blank")}
+                style={{
+                  fontSize: 11,
+                  padding: "4px 10px",
+                  borderRadius: 4,
+                  border: `1px solid ${PALETTE.border}`,
+                  background: PALETTE.white,
+                  cursor: "pointer",
+                }}
+              >
+                Open
+              </button>
+            </div>
+
+            {/* Expanded */}
+            {openId === entry.id && (
+              <div
+                style={{
+                  marginTop: 10,
+                  paddingTop: 10,
+                  borderTop: `1px solid ${PALETTE.border}`,
+                }}
+              >
+                <div style={{ fontSize: 12 }}>
+                  📞 {entry.contact_phone || "No phone"}
+                </div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>
+                  📂 {entry.service_type}
+                </div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>
+                  ⚖️ {entry.recommended_forum}
+                </div>
+                <div style={{ fontSize: 12, marginTop: 6 }}>
+                  {entry.fact_summary}
+                </div>
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ManualEntryCard() {
+  const [form, setForm] = useState({
+    client_name: "",
+    contact_phone: "",
+    service_type: "",
+    fact_summary: "",
+  });
+  const handleChange = (e: any) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async () => {
+    if (!form.client_name) {
+      alert("Client name is required");
+      return;
+    }
+
+    const { error } = await supabase.from("intake_briefs").insert([
+      {
+        ...form,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error(error);
+      alert("Error saving");
+    } else {
+      alert("Saved successfully");
+      setForm({
+        client_name: "",
+        contact_phone: "",
+        service_type: "",
+        fact_summary: "",
+      });
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      
+      {/* ✅ Header OUTSIDE card */}
+      <SectionHeader icon="✍️" title="Add Client Manually" />
+   <Card style={{ marginTop: 12 }}>
+
+  {/* 🔘 Action Buttons */}
+ <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+  
+  {/* Share Link */}
+  <button
+    onClick={() => window.open("/landing", "_blank")}
+    style={btnSecondary}
+  >
+    Share Consultation Link
+  </button>
+
+  {/* Toggle Form */}
+   <button
+            onClick={() => window.open("/manual-entry", "_blank")}
+            style={btnPrimary}
+          >
+            Fill Client Details
+          </button>
+
+</div>
+</Card>
+</div>
+  );
+}
+
+const btnPrimary = {
+  fontSize: 12,
+  fontWeight: 600,
+  padding: "6px 10px",
+  borderRadius: 4,
+  border: "none",
+  background: "#8B6914",
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const btnSecondary = {
+  fontSize: 12,
+  fontWeight: 600,
+  padding: "6px 10px",
+  borderRadius: 4,
+  border: "none",
+  background: "#8B6914",
+  color:"#fff",
+  cursor: "pointer",
+};
+
+const inputStyle = {
+  fontSize: 12,
+  padding: "6px 8px",
+  borderRadius: 4,
+  border: "1px solid #E8E0D4",
+};
+
 
 function IntakeBriefsList() {
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+ const [expandedId, setExpandedId] = useState<string | null>(null);
+ const [briefs, setBriefs] = useState<any[]>([]);
+ useEffect(() => {
+  const fetchBriefs = async () => {
+    const { data, error } = await supabase
+      .from("intake_briefs")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching briefs:", error);
+    } else {
+      setBriefs(data);
+    }
+  };
+
+  fetchBriefs();
+}, []);
   return (
     
     <div style={{ marginBottom: 20 }}>
-       <div className="flex justify-center mt-5">
-            <Link
-              href="/landing"
-              className="flex items-center justify-center w-[200px] h-[40px] rounded-full bg-[var(--olive-dark)] text-[#F5F0E8] text-sm font-semibold hover:opacity-90"
-            >
-              New Consultation
-            </Link>
-          </div>
       <SectionHeader icon="📋" title="Client Intake Briefs" count={intakeBriefs.filter(b => b.status === "new").length + " new"} action="Share bot link" onAction={() => window.open("/landing", "_blank")} />
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {intakeBriefs.map((brief) => (
@@ -465,7 +653,28 @@ export default function App() {
           
           {/* Left Column — Main Content */}
           <div>
-            <IntakeBriefsList />
+            {/* Top row → side by side */}
+           
+            <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "0.9fr 1.1fr",
+                  gap: 16,
+                  alignItems: "start",
+                  marginBottom: 20,
+                }}
+              >
+                {/* LEFT SIDE */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <NewEntriesCard />
+                  <ManualEntryCard />   {/* 👈 BELOW New Entries */}
+                </div>
+
+                {/* RIGHT SIDE */}
+                <IntakeBriefsList />
+              </div>
+
+            {/* Rest below */}
             <DeadlinesPanel />
             <TodayHearings />
           </div>
