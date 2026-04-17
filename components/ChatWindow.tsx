@@ -80,9 +80,27 @@ export default function ChatWindow() {
       const data = await res.json();
       if (data.type === "brief") {
         setBrief(data.data);
-        setMessages([...newMessages, {
-          role: "assistant", content: "BRIEF_READY", time: getTime(),
-        }]);
+       setMessages([
+    ...newMessages,
+    {
+      role: "assistant",
+      content:
+        "Thank you for sharing the details. Our advocate will review your case and get in touch with you shortly.",
+      time: getTime(),
+    },
+  ]);
+
+  // Step 2: Show brief after slight delay
+  setTimeout(() => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: "BRIEF_READY",
+        time: getTime(),
+      },
+    ]);
+  }, 1200);
       } else {
         // Generate contextual chips based on common follow-up answers
         const chips = generateChips(data.message);

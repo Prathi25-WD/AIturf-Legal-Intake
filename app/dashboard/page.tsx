@@ -43,6 +43,35 @@ const PALETTE = {
   amberLight: "#FFF8E7",
 };
 
+const shareItem = {
+  fontSize: 12,
+  padding: "8px 10px",
+  borderRadius: 4,
+  cursor: "pointer",
+  background: "#fff",
+  border: "1px solid #E8E0D4",
+  color: "#2C2418",
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  transition: "all 0.15s ease",
+};
+const iconCircle = {
+  width: 48,
+  height: 48,
+  borderRadius: "50%",
+  background: "#fff",
+  border: "1px solid #E8E0D4",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  margin: "0 auto 6px",
+};
+
+const iconLabel = {
+  fontSize: 11,
+  color: "#2C2418",
+};
 // ── Mock Data ──
 const today = new Date();
 const formatDate = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -184,13 +213,13 @@ const Card = ({ children, style = {} }: CardProps) => (
 
 // ── Main Views ──
 
-function TodaySummary() {
+function TodaySummary({ newCount }: { newCount: number }) {
   return (
     <Card style={{ borderLeft: `3px solid ${PALETTE.accent}`, marginBottom: 16 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 20 }}>
         <div>
           <div style={{ fontSize: 10, fontWeight: 600, color: PALETTE.textLight, letterSpacing: "0.08em", marginBottom: 4 }}>NEW INTAKE BRIEFS</div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: PALETTE.accent, fontFamily: "'Libre Baskerville', serif" }}>2</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: PALETTE.accent, fontFamily: "'Libre Baskerville', serif" }}>{newCount}</div>
           <div style={{ fontSize: 11, color: PALETTE.textMid }}>awaiting review</div>
         </div>
         <div>
@@ -234,15 +263,30 @@ function NewEntriesCard() {
   }, []);
 
   return (
-    <div style={{ maxHeight: 280, overflowY: "auto" }}>
-      <SectionHeader icon="🆕" title="New Entries" count={entries.length} />
+      <div
+    style={{
+      maxHeight: 280,
+      overflowY: "auto",
+      fontFamily: "'Source Sans 3', system-ui, sans-serif",
+      WebkitFontSmoothing: "antialiased",
+      MozOsxFontSmoothing: "grayscale",
+    }}
+  >
+      <SectionHeader icon="🆕" title="New Enquires" count={entries.length} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {entries.map((entry) => (
           <Card key={entry.id}>
             {/* Top row */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>
+              <span
+                  style={{
+                    fontSize: 14,          // slightly bigger
+                    fontWeight: 600,
+                    color: PALETTE.text,   // darker = clearer
+                    flex: 1,
+                  }}
+                >
                 {entry.client_name || "Unnamed Client"}
               </span>
 
@@ -292,6 +336,8 @@ function NewEntriesCard() {
 }
 
 function ManualEntryCard() {
+  const [showShare, setShowShare] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [form, setForm] = useState({
     client_name: "",
     contact_phone: "",
@@ -340,12 +386,82 @@ function ManualEntryCard() {
  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
   
   {/* Share Link */}
+<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+
+  {/* ✅ ALWAYS VISIBLE BUTTON */}
   <button
-    onClick={() => window.open("/landing", "_blank")}
+    onClick={() => setShowShare(!showShare)}
     style={btnSecondary}
   >
     Share Consultation Link
   </button>
+
+  {/* ✅ SHOW OPTIONS ONLY WHEN CLICKED */}
+  {showShare && (
+  <div
+    style={{
+      marginTop: 10,
+      padding: 8,
+      border: `1px solid ${PALETTE.border}`,
+      borderRadius: 8,
+      background: PALETTE.surfaceAlt,
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-around",
+        alignItems: "center",
+        textAlign: "center",
+      }}
+    >
+      {/* Email */}
+      <div
+        onClick={() =>
+          (window.location.href = `mailto:?subject=Legal Consultation&body=Please fill this form: ${window.location.origin}/landing`)
+        }
+        style={{ cursor: "pointer" }}
+      >
+        <div style={iconCircle}>📧</div>
+        <div style={iconLabel}>Share via Email</div>
+      </div>
+
+      {/* Copy */}
+      <div
+        onClick={() => {
+          navigator.clipboard.writeText(window.location.origin + "/landing");
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }}
+        style={{ cursor: "pointer" }}
+      >
+        <div style={iconCircle}>🔗</div>
+        <div style={iconLabel}>
+          {copied ? "Copied!" : "Copy Link"}
+        </div>
+      </div>
+
+      {/* WhatsApp */}
+      <div
+        onClick={() =>
+          window.open(
+            `https://wa.me/?text=${encodeURIComponent(window.location.origin + "/landing")}`
+          )
+        }
+        style={{ cursor: "pointer" }}
+      >
+        <div style={iconCircle}>
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"
+            style={{ width: 18, height: 18 }}
+          />
+        </div>
+        <div style={iconLabel}>WhatsApp</div>
+      </div>
+    </div>
+  </div>
+)}
+</div>
 
   {/* Toggle Form */}
    <button
@@ -588,12 +704,38 @@ function TeamPanel() {
 
 // ── Main App ──
 export default function App() {
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [entries, setEntries] = useState<any[]>([]);
+  const [mounted, setMounted] = useState(false);
+      useEffect(() => {
+      setMounted(true);
+    }, []);
+const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  useEffect(() => {
+  setCurrentTime(new Date()); // set once after mount
+
+  const timer = setInterval(() => {
+    setCurrentTime(new Date());
+  }, 60000);
+
+  return () => clearInterval(timer);
+}, []);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
+  const fetchEntries = async () => {
+    const { data, error } = await supabase
+      .from("intake_briefs")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching entries:", error);
+    } else {
+      setEntries(data);
+    }
+  };
+
+  fetchEntries();
+}, []);
 
   return (
     <div style={{ background: PALETTE.bg, minHeight: "100vh", fontFamily: "'Source Sans 3', 'Noto Sans', system-ui, sans-serif" }}>
@@ -626,12 +768,27 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: PALETTE.text }}>
-              {currentTime.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+           <div style={{ fontSize: 12, fontWeight: 600, color: PALETTE.text }}>
+              {currentTime &&
+                currentTime.toLocaleDateString('en-IN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
             </div>
+
             <div style={{ fontSize: 11, color: PALETTE.textLight }}>
-              {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-              {currentTime.getHours() >= 17 && currentTime.getHours() < 21 ? " — Office hours" : " — Court hours"}
+              {currentTime &&
+                currentTime.toLocaleTimeString('en-IN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+
+              {currentTime &&
+                (currentTime.getHours() >= 17 && currentTime.getHours() < 21
+                  ? " — Office hours"
+                  : " — Court hours")}
             </div>
           </div>
           <div style={{
@@ -646,7 +803,7 @@ export default function App() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 24px" }}>
         
         {/* Summary Strip */}
-        <TodaySummary />
+        <TodaySummary newCount={entries.length} />
 
         {/* Two Column Layout */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20 }}>

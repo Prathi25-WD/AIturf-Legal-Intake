@@ -24,6 +24,14 @@ export default function IntakeDetailPage() {
   textLight: "#9C8E7C",
   green: "#3D7A45",
 };
+const [isEditing, setIsEditing] = useState(false);
+const [formData, setFormData] = useState({
+  client_name: "",
+  contact_phone: "",
+  service_type: "",
+  recommended_forum: "",
+  fact_summary: "",
+});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,6 +45,13 @@ export default function IntakeDetailPage() {
         console.error(error);
       } else {
         setData(data);
+        setFormData({
+          client_name: data.client_name || "",
+          contact_phone: data.contact_phone || "",
+          service_type: data.service_type || "",
+          recommended_forum: data.recommended_forum || "",
+          fact_summary: data.fact_summary || "",
+        });
       }
     };
 
@@ -53,6 +68,24 @@ export default function IntakeDetailPage() {
   }}
 >Loading...</div>;
   }
+  const handleSave = async () => {
+  const { error } = await supabase
+    .from("intake_briefs")
+    .update(formData)
+    .eq("id", id);
+
+  if (error) {
+    console.error(error);
+    alert("Error saving");
+  } else {
+    alert("Updated successfully");
+
+    // update UI instantly
+    setData({ ...data, ...formData });
+
+    setIsEditing(false);
+  }
+};
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto" }}>
@@ -78,26 +111,105 @@ export default function IntakeDetailPage() {
       padding: 16,
     }}
   >
+        <button
+          onClick={() => setIsEditing(!isEditing)}
+          style={{
+            marginBottom: 12,
+            padding: "6px 12px",
+            borderRadius: 4,
+            border: "none",
+            background: "var(--olive-dark)",
+            color: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          {isEditing ? "Cancel" : "Edit"}
+    </button>
      <div style={{ marginBottom: 12 }}>
   <div style={{ fontSize: 11, color: PALETTE.textLight }}>CLIENT NAME</div>
   <div style={{ fontSize: 14, fontWeight: 600, color: PALETTE.text }}>
-    {data.client_name}
+    {isEditing ? (
+  <input
+    value={formData.client_name}
+    onChange={(e) =>
+      setFormData({ ...formData, client_name: e.target.value })
+    }
+    style={{
+      fontSize: 14,
+      padding: "6px 8px",
+      borderRadius: 4,
+      border: "1px solid #E8E0D4",
+      width: "100%",
+    }}
+  />
+) : (
+  data.client_name
+)}
   </div>
 </div>
 
 <div style={{ marginBottom: 12 }}>
   <div style={{ fontSize: 11, color: PALETTE.textLight }}>PHONE</div>
-  <div style={{ fontSize: 13 }}>{data.contact_phone}</div>
+  <div style={{ fontSize: 13 }}>{isEditing ? (
+  <input
+    value={formData.contact_phone}
+    onChange={(e) =>
+      setFormData({ ...formData, contact_phone: e.target.value })
+    }
+    style={{
+      fontSize: 14,
+      padding: "6px 8px",
+      borderRadius: 4,
+      border: "1px solid #E8E0D4",
+      width: "100%",
+    }} 
+     />
+) : (
+  data.contact_phone
+)}</div>
 </div>
 
 <div style={{ marginBottom: 12 }}>
   <div style={{ fontSize: 11, color: PALETTE.textLight }}>CASE TYPE</div>
-  <div style={{ fontSize: 13 }}>{data.service_type}</div>
+  <div style={{ fontSize: 13 }}>{isEditing ? (
+  <input
+    value={formData.service_type}
+    onChange={(e) =>
+      setFormData({ ...formData, service_type: e.target.value })
+    }
+    style={{
+      fontSize: 14,
+      padding: "6px 8px",
+      borderRadius: 4,
+      border: "1px solid #E8E0D4",
+      width: "100%",
+    }} 
+  />
+) : (
+  data.service_type
+)}
+</div>
 </div>
 
 <div style={{ marginBottom: 12 }}>
   <div style={{ fontSize: 11, color: PALETTE.textLight }}>RECOMMENDED COURT</div>
-  <div style={{ fontSize: 13 }}>{data.recommended_forum}</div>
+  <div style={{ fontSize: 13 }}>{isEditing ? (
+  <input
+    value={formData.recommended_forum}
+    onChange={(e) =>
+      setFormData({ ...formData, recommended_forum: e.target.value })
+    }
+    style={{
+      fontSize: 14,
+      padding: "6px 8px",
+      borderRadius: 4,
+      border: "1px solid #E8E0D4",
+      width: "100%",
+    }} 
+  />
+) : (
+  data.recommended_forum
+)}</div>
 </div>
 
 <div style={{ marginBottom: 12 }}>
@@ -110,9 +222,44 @@ export default function IntakeDetailPage() {
       borderRadius: 6,
     }}
   >
-    {data.fact_summary}
+    {isEditing ? (
+  <textarea
+    value={formData.fact_summary}
+    onChange={(e) =>
+      setFormData({ ...formData, fact_summary: e.target.value })
+    }
+    style={{
+     fontSize: 14,
+      padding: "6px 8px",
+      borderRadius: 4,
+      border: "1px solid #E8E0D4",
+      width: "100%",
+      minHeight: 80,
+          }}
+        />
+      ) : (
+        data.fact_summary
+      )}
   </div>
 </div>
+
+{isEditing && (
+  <button
+    onClick={handleSave}
+    style={{
+      marginTop: 12,
+      padding: "8px 14px",
+      borderRadius: 6,
+      border: "none",
+      background: PALETTE.accent,
+      color: "#fff",
+      fontWeight: 600,
+      cursor: "pointer",
+    }}
+  >
+    Save Changes
+  </button>
+)}
       <div style={{ marginTop: 20 }}>
   
   {/* Assign Button */}

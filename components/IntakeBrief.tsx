@@ -1,7 +1,7 @@
 "use client";
 import { useRef } from "react";
 
-declare const html2pdf: (element: HTMLElement, options?: object) => { save: () => void };
+import html2pdf from "html2pdf.js";
 
 interface BriefData {
   clientName: string;
@@ -41,18 +41,23 @@ export default function IntakeBrief({ brief, onBack }: Props) {
     day: "numeric", month: "long", year: "numeric",
   });
 
-  function downloadPDF() {
-    if (!briefRef.current) return;
-    const options = {
-      margin: [10, 10, 10, 10],
-      filename: "intake-brief-" + brief.clientName.split(" ").join("-") + ".pdf",
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    };
-    html2pdf(briefRef.current, options).save();
-  }
+ const isGeneratingRef = useRef(false);
+function downloadPDF() {
+  if (!briefRef.current) return;
 
+ const options = {
+  margin: 10,
+  filename: `intake-brief-${brief.clientName.replace(/\s+/g, "-")}.pdf`,
+  image: { type: "jpeg" as const, quality: 0.98 },
+  html2canvas: { scale: 2 },
+  jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
+};
+
+  html2pdf()
+    .from(briefRef.current)
+    .set(options)
+    .save();
+}
   const urg = urgencyStyle[brief.urgency?.toLowerCase()] ?? urgencyStyle.medium;
   const dl  = deadlineStyle[brief.deadlineStatus?.toLowerCase()] ?? deadlineStyle.safe;
 
@@ -131,7 +136,15 @@ export default function IntakeBrief({ brief, onBack }: Props) {
     <div style={S.page}>
       <div style={S.actionBar}>
         <button onClick={onBack} style={S.btnBack}>← Back to chat</button>
-        <button onClick={downloadPDF} style={S.btnPDF}>Download PDF</button>
+        <button
+  onClick={(e) => {
+    e.stopPropagation(); // 👈 prevents double trigger
+    downloadPDF();
+  }}
+  style={S.btnPDF}
+>
+  Download PDF
+</button>
       </div>
 
       <div style={S.wrap}>
