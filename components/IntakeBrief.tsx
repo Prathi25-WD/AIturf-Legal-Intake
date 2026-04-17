@@ -1,7 +1,7 @@
 "use client";
 import { useRef } from "react";
 
-import html2pdf from "html2pdf.js";
+
 
 interface BriefData {
   clientName: string;
@@ -42,21 +42,27 @@ export default function IntakeBrief({ brief, onBack }: Props) {
   });
 
  const isGeneratingRef = useRef(false);
-function downloadPDF() {
-  if (!briefRef.current) return;
+async function downloadPDF() {
+  if (typeof window === "undefined") return;
 
- const options = {
-  margin: 10,
-  filename: `intake-brief-${brief.clientName.replace(/\s+/g, "-")}.pdf`,
-  image: { type: "jpeg" as const, quality: 0.98 },
-  html2canvas: { scale: 2 },
-  jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
-};
+  const html2pdf = (await import("html2pdf.js")).default;
 
-  html2pdf()
-    .from(briefRef.current)
-    .set(options)
-    .save();
+  const element = document.getElementById("pdf-content");
+
+  if (!element) {
+    console.error("PDF element not found");
+    return;
+  }
+
+  const options = {
+    margin: 10,
+    filename: "intake-brief.pdf",
+    image: { type: "jpeg" as const, quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
+  };
+
+  html2pdf().from(element).set(options).save();
 }
   const urg = urgencyStyle[brief.urgency?.toLowerCase()] ?? urgencyStyle.medium;
   const dl  = deadlineStyle[brief.deadlineStatus?.toLowerCase()] ?? deadlineStyle.safe;

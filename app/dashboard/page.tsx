@@ -336,6 +336,7 @@ function NewEntriesCard() {
 }
 
 function ManualEntryCard() {
+  const isBrowser = typeof window !== "undefined";
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
   const [form, setForm] = useState({
@@ -417,9 +418,10 @@ function ManualEntryCard() {
     >
       {/* Email */}
       <div
-        onClick={() =>
-          (window.location.href = `mailto:?subject=Legal Consultation&body=Please fill this form: ${window.location.origin}/landing`)
-        }
+        onClick={() => {
+          if (!isBrowser) return;
+          window.location.href = `mailto:?subject=Legal Consultation&body=Please fill this form: ${window.location.origin}/landing`;
+        }}
         style={{ cursor: "pointer" }}
       >
         <div style={iconCircle}>📧</div>
@@ -429,6 +431,8 @@ function ManualEntryCard() {
       {/* Copy */}
       <div
         onClick={() => {
+          if (!isBrowser) return;
+
           navigator.clipboard.writeText(window.location.origin + "/landing");
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
@@ -443,11 +447,13 @@ function ManualEntryCard() {
 
       {/* WhatsApp */}
       <div
-        onClick={() =>
+        onClick={() => {
+          if (!isBrowser) return;
+
           window.open(
             `https://wa.me/?text=${encodeURIComponent(window.location.origin + "/landing")}`
-          )
-        }
+          );
+        }}
         style={{ cursor: "pointer" }}
       >
         <div style={iconCircle}>
