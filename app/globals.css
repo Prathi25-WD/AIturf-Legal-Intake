@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e2ddd4;
+  border-radius: 4px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #2d6a4f !important;
+}
+
+button {
+  font-family: inherit;
+}
+
 :root {
   --bg-page:        #F5F0E8;
   --bg-header:      #FDFAF4;
@@ -38,7 +63,10 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-page);   /* ✅ use your actual variable */
+  color: var(--text-primary);   /* ✅ match your theme */
+  font-family: 'Source Sans 3', Arial, Helvetica, sans-serif;
+
+  margin: 0;
+  overflow: hidden;
 }
