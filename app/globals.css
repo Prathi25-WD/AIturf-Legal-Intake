@@ -68,5 +68,32 @@ body {
   font-family: 'Source Sans 3', Arial, Helvetica, sans-serif;
 
   margin: 0;
-  overflow: hidden;
+  overflow-y: auto;
 }
+h1, h2, h3 {
+  font-family: 'Lora', Georgia, serif;
+}
+/* ── AITurf Dashboard Font Rules ── */
+ 
+/* 1. Source Sans 3 as the default for the whole page */
+body {
+  margin: 0;
+  overflow-y: auto;
+  font-family: 'Source Sans 3', 'Noto Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+ 
+/* 2. All buttons and inputs inherit the body font */
+button, input, select, textarea {
+  font-family: inherit;
+}
+ 
+/* 3. Lora as a utility class — apply to any element that needs the serif */
+.font-lora {
+  font-family: 'Lora', Georgia, serif;
+}
+ 
+/* 4. Custom scrollbar — matches the HTML dashboard */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: #e2ddd4; border-radius: 4px; }

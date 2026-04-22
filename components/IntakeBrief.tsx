@@ -45,25 +45,27 @@ export default function IntakeBrief({ brief, onBack }: Props) {
 async function downloadPDF() {
   if (typeof window === "undefined") return;
 
-  const html2pdf = (await import("html2pdf.js")).default;
-
   const element = document.getElementById("pdf-content");
-
   if (!element) {
     console.error("PDF element not found");
     return;
   }
 
-  const options = {
-    margin: 10,
-    filename: "intake-brief.pdf",
-    image: { type: "jpeg" as const, quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
-  };
+  const html2pdf = (await import("html2pdf.js")).default;
 
-  html2pdf().from(element).set(options).save();
+  const clientName = brief.clientName?.replace(/\s+/g, "-") || "client";
+
+html2pdf()
+  .from(element)
+  .set({
+    margin: 10,
+    filename: `intake-brief-${clientName}.pdf`,
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+  })
+  .save();
 }
+
   const urg = urgencyStyle[brief.urgency?.toLowerCase()] ?? urgencyStyle.medium;
   const dl  = deadlineStyle[brief.deadlineStatus?.toLowerCase()] ?? deadlineStyle.safe;
 
@@ -143,10 +145,9 @@ async function downloadPDF() {
       <div style={S.actionBar}>
         <button onClick={onBack} style={S.btnBack}>← Back to chat</button>
         <button
-  onClick={(e) => {
-    e.stopPropagation(); // 👈 prevents double trigger
-    downloadPDF();
-  }}
+  onClick={ 
+    downloadPDF
+  }
   style={S.btnPDF}
 >
   Download PDF
@@ -154,14 +155,14 @@ async function downloadPDF() {
       </div>
 
       <div style={S.wrap}>
-        <div ref={briefRef} style={S.card}>
+        <div  id="pdf-content" ref={briefRef} style={S.card}>
 
           {/* Header */}
           <div style={S.hdr}>
             <div>
               <p style={S.hdrSub}>Client Intake Brief</p>
-              <h1 style={S.hdrH1}>K.T. Dakappa &amp; Associates</h1>
-              <p style={S.hdrAddr}>DVG Road, Basavanagudi, Bangalore — 560004</p>
+              <h1 style={S.hdrH1}>Aadya Law</h1>
+              <p style={S.hdrAddr}>Ganganagar, Bengaluru - 560024</p>
             </div>
             <div style={S.hdrRight}>
               <p style={S.hdrLbl}>Date</p>

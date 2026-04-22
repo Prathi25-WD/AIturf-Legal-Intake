@@ -95,7 +95,7 @@ export default function Home() {
           Download your intake brief
         </p>
         <p className="text-sm text-gray-600 mt-1">
-          A structured PDF is generated so Dakappa sir can review before your meeting.
+          A structured PDF is generated so Aadya Law can review before your meeting.
         </p>
       </div>
     </div>

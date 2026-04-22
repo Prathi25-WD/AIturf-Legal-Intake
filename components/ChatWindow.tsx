@@ -28,9 +28,16 @@ function getHeaderDate() {
   });
 }
 function isOfficeHours() {
-  const h = new Date().getHours();
-  const day = new Date().getDay();
-  return day >= 1 && day <= 6 && h >= 17 && h < 21;
+  const now = new Date();
+
+  const ist = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+
+  const h = ist.getHours();
+  const day = ist.getDay();
+
+  return day >= 1 && day <= 6 && h >= 9 && h < 16;
 }
 
 const INITIAL_CHIPS = [
@@ -43,7 +50,7 @@ export default function ChatWindow() {
   const [file, setFile] = useState<File | null>(null);
   const [messages, setMessages] = useState<Message[]>([{
     role: "assistant",
-    content: "Namaskara! Welcome to K.T. Dakappa & Associates. I am here to help you describe your legal matter so the advocate can review it. Please tell me about your situation in your own words or Please select the options below",
+    content: "Namaskara! Welcome to Aadya Law. I am here to help you describe your legal matter so the advocate can review it. Please tell me about your situation in your own words or Please select the options below",
     time: getTime(),
     chips: INITIAL_CHIPS,
   }]);
@@ -121,29 +128,37 @@ export default function ChatWindow() {
   }
 
   function generateChips(botMessage: string): string[] | undefined {
-    const msg = botMessage.toLowerCase();
-    if (msg.includes("document") || msg.includes("deed") || msg.includes("agreement")) {
-      return ["Yes, I have documents", "No documents yet", "Not sure what I have"];
-    }
-    if (msg.includes("residential") || msg.includes("commercial")) {
-      return ["Residential", "Commercial"];
-    }
-    if (msg.includes("how long") || msg.includes("when did") || msg.includes("how many months")) {
-      return ["Less than 1 year", "1-3 years", "More than 3 years"];
-    }
-    if (msg.includes("notice") || msg.includes("sent") || msg.includes("communicated")) {
-      return ["Yes, sent notice", "No notice yet"];
-    }
-    if (msg.includes("will") || msg.includes("testament")) {
-      return ["Yes, there is a will", "No will", "Not sure"];
-    }
-    return undefined;
+  const msg = botMessage.toLowerCase();
+
+  // 🔥 PRIORITY: legal notice (more specific)
+  if (msg.includes("notice")) {
+    return ["Yes, I have sent a notice", "No, not yet", "Planning to send soon"];
   }
+
+  // 📄 Documents / agreement
+  if (msg.includes("document") || msg.includes("deed") || msg.includes("agreement")) {
+    return ["Yes, I have documents", "No documents yet", "Not sure what I have"];
+  }
+
+  if (msg.includes("residential") || msg.includes("commercial")) {
+    return ["Residential", "Commercial"];
+  }
+
+  if (msg.includes("how long") || msg.includes("when did") || msg.includes("how many months")) {
+    return ["Less than 1 year", "1-3 years", "More than 3 years"];
+  }
+
+  if (msg.includes("will") || msg.includes("testament")) {
+    return ["Yes, there is a will", "No will", "Not sure"];
+  }
+
+  return undefined;
+}
 
   function resetConversation() {
     setMessages([{
       role: "assistant",
-      content: "Namaskara! Welcome to K.T. Dakappa & Associates. I am here to help you describe your legal matter so the advocate can review it. Please tell me about your situation in your own words.",
+      content: "Namaskara! Welcome to Aadya Law. I am here to help you describe your legal matter so the advocate can review it. Please tell me about your situation in your own words.",
       time: getTime(),
       chips: INITIAL_CHIPS,
     }]);
@@ -209,10 +224,11 @@ export default function ChatWindow() {
           }}>AT</div>
           <div style={{ minWidth: 0 }}>
             <p style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-primary)", margin: 0, lineHeight: 1.3 }}>
-              K.T. Dakappa &amp; Associates
+              Aadya Law
             </p>
             <p style={{ fontSize: "11px", color: "var(--text-secondary)", margin: 0, lineHeight: 1.3 }}>
-              Advocates &amp; Legal Consultants, Basavanagudi, Bangalore
+              Advocates &amp; Legal Consultants,
+              Bangalore
             </p>
           </div>
         </div>
@@ -235,7 +251,7 @@ export default function ChatWindow() {
             background: "var(--cream-dark)", color: "var(--olive-dark)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: "11px", fontWeight: 600,
-          }}>KD</div>
+          }}>AL</div>
           <button onClick={resetConversation} style={{
             background: "var(--bg-page)", border: "1px solid var(--border-main)",
             borderRadius: "8px", padding: "7px 12px", fontSize: "12px",

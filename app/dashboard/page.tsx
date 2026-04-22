@@ -296,7 +296,7 @@ function Overview({ nav, entries }: {
 }) {
   return (
     <div>
-      <SectionTitle sub="Friday, 17 April 2026 — K.T. Dakappa & Associates">
+      <SectionTitle sub="Friday, 17 April 2026 — Aadya Law">
         Today at a Glance
       </SectionTitle>
  
@@ -1640,26 +1640,7 @@ function Tools() {
             </div>
           ))}
         </Card>
- 
-        {/* Court Fee Reference */}
-        <Card>
-          <div style={{ fontSize: 13, fontWeight: 700, color: P.ink, marginBottom: 4 }}>
-            🏛 Court Fee Reference
-          </div>
-          <div style={{ fontSize: 11, color: P.muted, marginBottom: 14 }}>
-            Karnataka Court Fees Act (ad valorem)
-          </div>
-          {courtFees.map(([range, fee], i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between",
-              padding: "5px 0",
-              borderBottom: i < courtFees.length - 1 ? "1px solid " + P.border : "none",
-              fontSize: 11.5 }}>
-              <span style={{ color: P.muted }}>{range}</span>
-              <span style={{ color: P.ink, fontWeight: 700 }}>{fee}</span>
-            </div>
-          ))}
-        </Card>
- 
+
         {/* eCourts */}
         <Card>
           <div style={{ fontSize: 13, fontWeight: 700, color: P.ink, marginBottom: 4 }}>
@@ -1691,6 +1672,27 @@ function Tools() {
             </div>
           )}
         </Card>
+ 
+        {/* Court Fee Reference */}
+        <Card>
+          <div style={{ fontSize: 13, fontWeight: 700, color: P.ink, marginBottom: 4 }}>
+            🏛 Court Fee Reference
+          </div>
+          <div style={{ fontSize: 11, color: P.muted, marginBottom: 14 }}>
+            Karnataka Court Fees Act (ad valorem)
+          </div>
+          {courtFees.map(([range, fee], i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between",
+              padding: "5px 0",
+              borderBottom: i < courtFees.length - 1 ? "1px solid " + P.border : "none",
+              fontSize: 11.5 }}>
+              <span style={{ color: P.muted }}>{range}</span>
+              <span style={{ color: P.ink, fontWeight: 700 }}>{fee}</span>
+            </div>
+          ))}
+        </Card>
+ 
+        
       </div>
     </div>
   );
@@ -1795,11 +1797,11 @@ export default function App() {
           <div style={{ fontFamily: "'Lora', Georgia, serif",
             fontSize: 17, fontWeight: 700, color: P.accent,
             letterSpacing: "-0.01em" }}>
-            AITurf
+            Aadya Law
           </div>
           <div style={{ fontSize: 9.5, color: P.dim,
             letterSpacing: "0.08em", marginTop: 3, textTransform: "uppercase" }}>
-            K.T. Dakappa &amp; Assoc.
+            Powered by AITurf
           </div>
         </div>
  
@@ -1884,7 +1886,7 @@ export default function App() {
             <div style={{ fontSize: 11.5, fontWeight: 600, color: P.accent,
               background: P.accentL, padding: "3px 12px",
               borderRadius: 20, border: "1px solid rgba(45,106,79,0.2)" }}>
-              K.T. Dakappa
+              Aadya Law
             </div>
           </div>
         </div>
