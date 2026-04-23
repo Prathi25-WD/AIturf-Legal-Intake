@@ -697,12 +697,22 @@ function AddClient() {
                   window.open(`https://wa.me/?text=${encodeURIComponent(message)}`);
                 }}>
                   <div style={{
-                    width:44, height:44, borderRadius:"50%",
-                    background:P.s1, border:`1px solid ${P.border}`,
-                    display:"flex", alignItems:"center",
-                    justifyContent:"center", margin:"0 auto 5px",
-                    fontSize:20,
-                  }}>💬</div>
+                      width:44,
+                      height:44,
+                      borderRadius:"50%",
+                      background:P.s1,
+                      border:`1px solid ${P.border}`,
+                      display:"flex",
+                      alignItems:"center",
+                      justifyContent:"center",
+                      margin:"0 auto 5px",
+                    }}>
+                      <img
+                        src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"
+                        alt="WhatsApp"
+                        style={{ width:22, height:22 }}
+                      />
+                    </div>
                   <div style={{ fontSize:11, color:P.text }}>WhatsApp</div>
                 </div>
 
