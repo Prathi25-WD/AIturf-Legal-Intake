@@ -74,8 +74,7 @@ function formatBriefForWhatsApp(brief: Record<string, unknown>): string {
     "",
     "_This does not constitute legal advice._",
   ];
-  return lines.join("
-");
+  return lines.join("");
 }
 
 // ── Main webhook handler ──
