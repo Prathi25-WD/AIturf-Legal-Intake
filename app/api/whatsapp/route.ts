@@ -134,10 +134,12 @@ if (buttonPayload === "📄 Check Case Status") {
 
 // When user sends phone number
 if (/^\d{10}$/.test(body)) {
-  const { data } = await supabase
-    .from("cases")
-    .select("*")
-    .eq("contact_phone", body);
+ const cleanPhone = body.replace(/\D/g, "");
+
+const { data } = await supabase
+  .from("intake_briefs")
+  .select("*")
+  .ilike("contact_phone", `%${cleanPhone}%`);
 
   if (!data || data.length === 0) {
     await twilioClient.messages.create({
