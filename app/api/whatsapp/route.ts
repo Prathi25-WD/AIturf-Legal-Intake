@@ -19,6 +19,8 @@ const anthropic = new Anthropic({
 // Key = client WhatsApp number, Value = message history
 const conversations = new Map<string, { role: "user" | "assistant"; content: string }[]>();
 
+const userState = new Map<string, string>();
+
 // ── JSON extractor (same as your web chat) ──
 function extractJSON(text: string): Record<string, unknown> | null {
   try {
@@ -74,7 +76,7 @@ function formatBriefForWhatsApp(brief: Record<string, unknown>): string {
     "",
     "_This does not constitute legal advice._",
   ];
-  return lines.join("");
+  return lines.join("\n");
 }
 
 // ── Main webhook handler ──
@@ -84,12 +86,105 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const from    = formData.get("From") as string;   // e.g. "whatsapp:+919845012345"
     const body    = formData.get("Body") as string;   // the client's message text
+    const buttonPayload = formData.get("ButtonPayload") as string;
+    const listReply = formData.get("ListResponse") as string;
 
     if (!from || !body) {
       return new Response("Missing From or Body", { status: 400 });
     }
+    const isGreeting =
+  ["hi", "hello", "hey"].includes(body.toLowerCase().trim()) ||
+  !userState.has(from);
+
+if (isGreeting) {
+  userState.set(from, "welcome");
+
+  await twilioClient.messages.create({
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    body: "👋 Welcome to Aadya Law!\n\nHow can we assist you today?",
+    persistentAction: [
+      "reply:check_status:📄 Check Case Status",
+      "reply:new_consult:🧠 New Consultation",
+      "reply:contact:📞 Contact Office"
+    ]
+  });
+
+  return new Response("", { status: 200 });
+}
 
     console.log(`WhatsApp from ${from}: ${body}`);
+
+    // ── Handle button clicks ──
+if (buttonPayload === "check_status") {
+  userState.set(from, "case_status");
+
+  await twilioClient.messages.create({
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    body: "Please share your registered phone number or Case Reference ID."
+  });
+
+  return new Response("", { status: 200 });
+}
+
+if (buttonPayload === "new_consult") {
+  userState.set(from, "choose_category");
+
+  await twilioClient.messages.create({
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    body: "Select your case type:\n\n1. Civil\n2. Criminal\n3. Corporate\n\nReply with a number."
+  });
+
+  return new Response("", { status: 200 });
+}
+
+if (buttonPayload === "contact") {
+  await twilioClient.messages.create({
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    body: "📞 Call us at: +91XXXXXXXXXX"
+  });
+
+  return new Response("", { status: 200 });
+}
+
+if (userState.get(from) === "choose_category") {
+  userState.set(from, "ai_intake");
+
+  conversations.set(from, []);
+
+  await twilioClient.messages.create({
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    body: "Please describe your issue in detail."
+  });
+
+  return new Response("", { status: 200 });
+}
+if (userState.get(from) === "case_status") {
+  const { data } = await supabase
+    .from("cases")
+    .select("*")
+    .eq("contact_phone", body);
+
+  if (!data || data.length === 0) {
+    await twilioClient.messages.create({
+      from: process.env.TWILIO_WHATSAPP_FROM!,
+      to: from,
+      body: "❌ No cases found. Please try again or contact office."
+    });
+  } else {
+    await twilioClient.messages.create({
+      from: process.env.TWILIO_WHATSAPP_FROM!,
+      to: from,
+      body: `📄 Case Status:\n\nStatus: ${data[0].status}`
+    });
+  }
+
+  return new Response("", { status: 200 });
+}
 
     // Get or create conversation history for this phone number
     if (!conversations.has(from)) {
