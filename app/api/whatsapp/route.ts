@@ -148,12 +148,26 @@ const { data } = await supabase
       body: "❌ No cases found."
     });
   } else {
-    await twilioClient.messages.create({
-      from: process.env.TWILIO_WHATSAPP_FROM!,
-      to: from,
-      body: `📄 Case Status:\n\nStatus: ${data[0].status}`
-    });
-  }
+  const caseData = data[0];
+
+  const message = `📄 *Case Details*
+
+👤 *Client:* ${caseData.client_name || "—"}
+⚖️ *Case Type:* ${caseData.service_type || "—"}
+📝 *Summary:* ${caseData.fact_summary || "—"}
+
+📍 *Forum:* ${caseData.recommended_forum || "—"}
+⏳ *Deadline:* ${caseData.deadline_status || "—"}
+🔥 *Urgency:* ${caseData.urgency || "—"}
+
+_Our team will review your case before consultation._`;
+
+  await twilioClient.messages.create({
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    body: message
+  });
+}
 
   return new Response("", { status: 200 });
 }
@@ -162,10 +176,10 @@ if (buttonPayload === "🧠 New Consultation") {
   userState.set(from, "choose_category");
 
   await twilioClient.messages.create({
-    from: process.env.TWILIO_WHATSAPP_FROM!,
-    to: from,
-    body: "Select your case type:\n\n1. Civil\n2. Criminal\n3. Corporate\n\nReply with a number."
-  });
+  from: process.env.TWILIO_WHATSAPP_FROM!,
+  to: from,
+  contentSid: "HXeeb7880db8a2e042abaad267e39666"
+});
 
   return new Response("", { status: 200 });
 }
@@ -180,41 +194,23 @@ if (buttonPayload === "📞 Contact Office") {
   return new Response("", { status: 200 });
 }
 
-if (userState.get(from) === "choose_category") {
-  userState.set(from, "ai_intake");
-
+// ✅ STEP 3 — Case type buttons
+if (
+  buttonPayload === "⚖️ Civil" ||
+  buttonPayload === "🚔 Criminal" ||
+  buttonPayload === "🏢 Corporate"
+) {
   conversations.set(from, []);
 
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
-    body: "Please describe your issue in detail."
+    body: `You selected *${buttonPayload}*.\n\nPlease describe your issue in detail.`
   });
 
   return new Response("", { status: 200 });
 }
-if (userState.get(from) === "case_status") {
-  const { data } = await supabase
-    .from("cases")
-    .select("*")
-    .eq("contact_phone", body);
 
-  if (!data || data.length === 0) {
-    await twilioClient.messages.create({
-      from: process.env.TWILIO_WHATSAPP_FROM!,
-      to: from,
-      body: "❌ No cases found. Please try again or contact office."
-    });
-  } else {
-    await twilioClient.messages.create({
-      from: process.env.TWILIO_WHATSAPP_FROM!,
-      to: from,
-      body: `📄 Case Status:\n\nStatus: ${data[0].status}`
-    });
-  }
-
-  return new Response("", { status: 200 });
-}
 
     // Get or create conversation history for this phone number
     
