@@ -69,7 +69,7 @@ function formatBriefForWhatsApp(brief: Record<string, unknown>): string {
     `*Deadline status:* ${brief.deadlineStatus || "—"}`,
     `*Urgency:* ${brief.urgency || "—"}`,
     "",
-    "Your intake brief has been submitted to K.T. Dakappa & Associates.",
+    "Your intake brief has been submitted to Aadya Law.",
     "The advocate will review it before your consultation.",
     "",
     "_This does not constitute legal advice._",

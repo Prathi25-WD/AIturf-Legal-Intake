@@ -397,7 +397,7 @@ function Overview({ nav, entries }: {
         <SecLabel>Quick Actions</SecLabel>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
           {[
-            { label: "Share Intake Bot Link", icon: "🔗", sc: "intake" },
+            { label: "Share Intake Bot Link", icon: "🔗", sc: "add-client" },
             { label: "Add Case Manually",     icon: "➕", sc: "add-client" },
             { label: "Draft Legal Notice",    icon: "📝", sc: "ai-drafts" },
             { label: "Check eCourts Status",  icon: "🔍", sc: "tools" },
@@ -679,16 +679,33 @@ function AddClient() {
                 </div>
               </div>
  
-              <div onClick={() => {
-                window.open("https://wa.me/?text=" +
-                  encodeURIComponent(window.location.origin + "/landing"));
-              }} style={{ cursor: "pointer" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%",
-                  border: "1px solid " + P.border, background: P.s1,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto 4px", fontSize: 18 }}>💬</div>
-                <div style={{ fontSize: 10, color: P.text }}>WhatsApp</div>
-              </div>
+              
+                <div style={{ cursor:"pointer" }} onClick={() => {
+                  if (typeof window === "undefined") return;
+                  const chatUrl = window.location.origin + "/chat";
+                  const message = `Namaskara,
+
+                Aadya Law has set up an online intake form for you to describe your legal matter before your consultation.
+
+                Please click the link below and answer a few questions. The advocate will review your case before meeting you.
+
+                ${chatUrl}
+
+                This takes about 5 minutes and is available 24/7.
+
+                _This does not constitute legal advice._`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`);
+                }}>
+                  <div style={{
+                    width:44, height:44, borderRadius:"50%",
+                    background:P.s1, border:`1px solid ${P.border}`,
+                    display:"flex", alignItems:"center",
+                    justifyContent:"center", margin:"0 auto 5px",
+                    fontSize:20,
+                  }}>💬</div>
+                  <div style={{ fontSize:11, color:P.text }}>WhatsApp</div>
+                </div>
+
  
             </div>
           </div>
@@ -1142,6 +1159,7 @@ function CaseDetail({ item, nav }: {
                 {item.last}
               </p>
             </Card>
+            
           </div>
           <Card>
             <SecLabel>Documents on File</SecLabel>
@@ -1164,7 +1182,16 @@ function CaseDetail({ item, nav }: {
               fontFamily: "inherit",
             }}>View All Documents</button>
           </Card>
+          <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => nav("ai-drafts")} style={{
+            padding: "7px 16px", background: P.blue, color: "#fff",
+            border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700,
+            cursor: "pointer", fontFamily: "inherit",
+          }}>Upload Details</button>
+         
         </div>
+        </div>
+        
       )}
       {tab === "timeline" && (
         <Card>
@@ -1183,9 +1210,20 @@ function CaseDetail({ item, nav }: {
                 <div style={{ fontSize: 13, color: P.text, marginTop: 2 }}>{e.e}</div>
               </div>
             </div>
+            
           ))}
+          <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => nav("ai-drafts")} style={{
+            padding: "7px 16px", background: P.blue, color: "#fff",
+            border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700,
+            cursor: "pointer", fontFamily: "inherit",marginTop:"10px"
+          }}>Next Step</button>
+         
+        </div>
         </Card>
+        
       )}
+      
     </div>
   );
 }
@@ -1853,7 +1891,7 @@ export default function App() {
           <div style={{ fontSize: 10, fontWeight: 600, color: P.muted,
             marginBottom: 3 }}>Office Hours</div>
           <div style={{ fontSize: 10.5, color: P.dim, lineHeight: 1.6 }}>
-            Mon–Sat · 5:30–9:00 PM<br />Basavanagudi, Bangalore
+            Mon–Sat · 9:00 AM–4:00 PM<br />Basavanagudi, Bangalore
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6,
             marginTop: 8, fontSize: 10.5, color: P.muted }}>
