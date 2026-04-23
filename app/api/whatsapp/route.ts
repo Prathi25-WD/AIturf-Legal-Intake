@@ -104,19 +104,16 @@ export async function POST(req: NextRequest) {
 const history = conversations.get(from)!;
 
 // ✅ THEN check greeting
-const isGreeting =
-  ["hi", "hello", "hey"].includes(body.toLowerCase().trim()) ||
-  history.length === 0;
-
+const isGreeting = ["hi", "hello", "hey"].includes(
+  body.toLowerCase().trim()
+);
 
 if (isGreeting) {
-  userState.set(from, "welcome");
-
   await twilioClient.messages.create({
-  from: process.env.TWILIO_WHATSAPP_FROM!,
-  to: from,
-  contentSid: "HXff10a484029f9b1be2d4e85cb2f5e0a3"
-});
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    contentSid: "HXff10a484029f9b1be2d4e85cb2f5e0a3"
+  });
 
   return new Response("", { status: 200 });
 }
