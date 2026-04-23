@@ -86,15 +86,28 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const from    = formData.get("From") as string;   // e.g. "whatsapp:+919845012345"
     const body    = formData.get("Body") as string;   // the client's message text
-    const buttonPayload = formData.get("ButtonPayload") as string;
+    const buttonPayload =
+  (formData.get("ButtonPayload") as string) ||
+  (formData.get("ButtonText") as string) ||
+  body;
     const listReply = formData.get("ListResponse") as string;
 
     if (!from || !body) {
       return new Response("Missing From or Body", { status: 400 });
     }
-    const isGreeting =
+    
+    
+    if (!conversations.has(from)) {
+  conversations.set(from, []);
+}
+
+const history = conversations.get(from)!;
+
+// ✅ THEN check greeting
+const isGreeting =
   ["hi", "hello", "hey"].includes(body.toLowerCase().trim()) ||
-  !conversations.has(from);
+  history.length === 0;
+
 
 if (isGreeting) {
   userState.set(from, "welcome");
@@ -111,19 +124,42 @@ if (isGreeting) {
     console.log(`WhatsApp from ${from}: ${body}`);
 
     // ── Handle button clicks ──
-if (buttonPayload === "check_status") {
-  userState.set(from, "case_status");
-
+// When button clicked
+if (buttonPayload === "📄 Check Case Status") {
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
-    body: "Please share your registered phone number or Case Reference ID."
+    body: "Please enter your 10-digit phone number."
   });
 
   return new Response("", { status: 200 });
 }
 
-if (buttonPayload === "new_consult") {
+// When user sends phone number
+if (/^\d{10}$/.test(body)) {
+  const { data } = await supabase
+    .from("cases")
+    .select("*")
+    .eq("contact_phone", body);
+
+  if (!data || data.length === 0) {
+    await twilioClient.messages.create({
+      from: process.env.TWILIO_WHATSAPP_FROM!,
+      to: from,
+      body: "❌ No cases found."
+    });
+  } else {
+    await twilioClient.messages.create({
+      from: process.env.TWILIO_WHATSAPP_FROM!,
+      to: from,
+      body: `📄 Case Status:\n\nStatus: ${data[0].status}`
+    });
+  }
+
+  return new Response("", { status: 200 });
+}
+
+if (buttonPayload === "🧠 New Consultation") {
   userState.set(from, "choose_category");
 
   await twilioClient.messages.create({
@@ -135,7 +171,7 @@ if (buttonPayload === "new_consult") {
   return new Response("", { status: 200 });
 }
 
-if (buttonPayload === "contact") {
+if (buttonPayload === "📞 Contact Office") {
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
@@ -182,10 +218,7 @@ if (userState.get(from) === "case_status") {
 }
 
     // Get or create conversation history for this phone number
-    if (!conversations.has(from)) {
-      conversations.set(from, []);
-    }
-    const history = conversations.get(from)!;
+    
 
     // Add user message to history
     history.push({ role: "user", content: body });
