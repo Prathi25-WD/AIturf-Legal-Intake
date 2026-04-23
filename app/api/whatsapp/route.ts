@@ -94,21 +94,16 @@ export async function POST(req: NextRequest) {
     }
     const isGreeting =
   ["hi", "hello", "hey"].includes(body.toLowerCase().trim()) ||
-  !userState.has(from);
+  !conversations.has(from);
 
 if (isGreeting) {
   userState.set(from, "welcome");
 
   await twilioClient.messages.create({
-    from: process.env.TWILIO_WHATSAPP_FROM!,
-    to: from,
-    body: "👋 Welcome to Aadya Law!\n\nHow can we assist you today?",
-    persistentAction: [
-      "reply:check_status:📄 Check Case Status",
-      "reply:new_consult:🧠 New Consultation",
-      "reply:contact:📞 Contact Office"
-    ]
-  });
+  from: process.env.TWILIO_WHATSAPP_FROM!,
+  to: from,
+  contentSid: "HXff10a484029f9b1be2d4e85cb2f5e0a3"
+});
 
   return new Response("", { status: 200 });
 }
