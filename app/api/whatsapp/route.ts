@@ -122,7 +122,7 @@ if (isGreeting) {
 
     // ── Handle button clicks ──
 // When button clicked
-if (buttonPayload === "📄 Check Case Status") {
+if (buttonPayload === "📄 Check Case Status"|| buttonPayload === "check_status") {
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
@@ -172,7 +172,7 @@ _Our team will review your case before consultation._`;
   return new Response("", { status: 200 });
 }
 
-if (buttonPayload === "🧠 New Consultation") {
+if (buttonPayload === "🧠 New Consultation" || buttonPayload === "new_consult") {
   userState.set(from, "choose_category");
 
   await twilioClient.messages.create({
@@ -184,7 +184,7 @@ if (buttonPayload === "🧠 New Consultation") {
   return new Response("", { status: 200 });
 }
 
-if (buttonPayload === "📞 Contact Office") {
+if (buttonPayload === "📞 Contact Office"|| buttonPayload === "contact") {
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
