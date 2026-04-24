@@ -122,7 +122,13 @@ if (isGreeting) {
 
     // ── Handle button clicks ──
 // When button clicked
-if (buttonPayload === "📄 Check Case Status"|| buttonPayload === "check_status") {
+const action = (buttonPayload || body || "").toLowerCase().trim();
+console.log("---- DEBUG ----");
+console.log("Body:", body);
+console.log("ButtonPayload:", buttonPayload);
+console.log("ACTION:", action);
+console.log("----------------");
+if (action.includes("check")) {
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
@@ -172,8 +178,8 @@ _Our team will review your case before consultation._`;
   return new Response("", { status: 200 });
 }
 
-if (buttonPayload === "🧠 New Consultation" || buttonPayload === "new_consult") {
-  userState.set(from, "choose_category");
+if (action.includes("consult")) {
+  
 
   await twilioClient.messages.create({
   from: process.env.TWILIO_WHATSAPP_FROM!,
@@ -184,7 +190,7 @@ if (buttonPayload === "🧠 New Consultation" || buttonPayload === "new_consult"
   return new Response("", { status: 200 });
 }
 
-if (buttonPayload === "📞 Contact Office"|| buttonPayload === "contact") {
+if (action.includes("contact")) {
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
