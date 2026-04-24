@@ -204,14 +204,20 @@ Reply with 1, 2, or 3`
 if (userState.get(from) === "choose_category") {
   let category = "";
 
-  if (body === "1") category = "Civil";
-  else if (body === "2") category = "Criminal";
-  else if (body === "3") category = "Corporate";
+  if (body === "1") category = "Property Title Dispute";
+  else if (body === "2") category = "Property Partition";
+  else if (body === "3") category = "Encroachment";
+  else if (body === "4") category = "Rent and Tenancy";
+  else if (body === "5") category = "Family and Succession";
+  else if (body === "6") category = "Contract Dispute";
+  else if (body === "7") category = "Rera/Buider issue";
+  else if (body === "8") category = "Cheque Bounce";
+  else if (body === "9") category = "Others";
   else {
     await twilioClient.messages.create({
       from: process.env.TWILIO_WHATSAPP_FROM!,
       to: from,
-      body: "❌ Please reply with 1, 2 or 3."
+      body: "❌ Please reply with 1, 2 or 3..."
     });
     return new Response("", { status: 200 });
   }
