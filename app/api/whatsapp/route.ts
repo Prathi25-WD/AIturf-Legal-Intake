@@ -178,15 +178,56 @@ _Our team will review your case before consultation._`;
   return new Response("", { status: 200 });
 }
 
-if (action.includes("consult")) {
-  
+if (
+  buttonPayload === "🧠 New Consultation" ||
+  buttonPayload === "new_consult" ||
+  action === "2"
+) {
+  userState.set(from, "choose_category");
 
   await twilioClient.messages.create({
-  from: process.env.TWILIO_WHATSAPP_FROM!,
-  to: from,
-  contentSid: "HXeeb7880db8a2e042abaad267e39666",
-  contentVariables: JSON.stringify({})
-});
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    body: `🧠 *New Consultation*
+
+Select your case type:
+
+1️⃣ Civil  
+2️⃣ Criminal  
+3️⃣ Corporate  
+
+Reply with 1, 2, or 3`
+  });
+
+  return new Response("", { status: 200 });
+}
+if (userState.get(from) === "choose_category") {
+  let category = "";
+
+  if (body === "1") category = "Civil";
+  else if (body === "2") category = "Criminal";
+  else if (body === "3") category = "Corporate";
+  else {
+    await twilioClient.messages.create({
+      from: process.env.TWILIO_WHATSAPP_FROM!,
+      to: from,
+      body: "❌ Please reply with 1, 2 or 3."
+    });
+    return new Response("", { status: 200 });
+  }
+
+  userState.set(from, "ai_intake");
+
+  // Reset conversation for AI
+  conversations.set(from, []);
+
+  await twilioClient.messages.create({
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    body: `✅ ${category} case selected.
+
+Please describe your issue in detail.`
+  });
 
   return new Response("", { status: 200 });
 }
@@ -201,22 +242,6 @@ if (action.includes("contact")) {
   return new Response("", { status: 200 });
 }
 
-// ✅ STEP 3 — Case type buttons
-if (
-  buttonPayload === "⚖️ Civil" ||
-  buttonPayload === "🚔 Criminal" ||
-  buttonPayload === "🏢 Corporate"
-) {
-  conversations.set(from, []);
-
-  await twilioClient.messages.create({
-    from: process.env.TWILIO_WHATSAPP_FROM!,
-    to: from,
-    body: `You selected *${buttonPayload}*.\n\nPlease describe your issue in detail.`
-  });
-
-  return new Response("", { status: 200 });
-}
 
 
     // Get or create conversation history for this phone number
