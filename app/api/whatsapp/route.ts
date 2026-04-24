@@ -184,7 +184,8 @@ if (action.includes("consult")) {
   await twilioClient.messages.create({
   from: process.env.TWILIO_WHATSAPP_FROM!,
   to: from,
-  contentSid: "HXeeb7880db8a2e042abaad267e39666"
+  contentSid: "HXeeb7880db8a2e042abaad267e39666",
+  contentVariables: JSON.stringify({})
 });
 
   return new Response("", { status: 200 });
