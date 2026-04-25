@@ -186,63 +186,55 @@ if (
   userState.set(from, "choose_category");
 
   await twilioClient.messages.create({
-    from: process.env.TWILIO_WHATSAPP_FROM!,
-    to: from,
-    body: `🧠 *New Consultation*
-
-Select your case type:
-
-1️⃣ Property Title Dispute
-2️⃣ Propoerty Partition 
-3️⃣ Encroachment
-4️⃣ Rent and Tenancy
-5️⃣ Family and Succession
-6️⃣ Contract Dispute
-7️⃣ Rera/Builder issue
-8️⃣ Cheque Bounce
-9️⃣ Others
-
-Reply with 1, 2, or 3`
-  });
-
-  return new Response("", { status: 200 });
+  from: process.env.TWILIO_WHATSAPP_FROM!,
+  to: from,
+  contentSid: "HX8e74f927c21dd4361ea42443ae412",
+  
+});
+return new Response("", { status: 200 });
 }
-if (userState.get(from) === "choose_category") {
-  let category = "";
 
-  if (body === "1") category = "Property Title Dispute";
-  else if (body === "2") category = "Property Partition";
-  else if (body === "3") category = "Encroachment";
-  else if (body === "4") category = "Rent and Tenancy";
-  else if (body === "5") category = "Family and Succession";
-  else if (body === "6") category = "Contract Dispute";
-  else if (body === "7") category = "Rera/Builder issue";
-  else if (body === "8") category = "Cheque Bounce";
-  else if (body === "9") category = "Others";
-  else {
+if (userState.get(from) === 'choose_category') {
+  const listReply = formData.get('ListResponse') as string;
+  const selectedId = listReply || body; // fallback to body text if needed
+
+  const categoryMap: Record<string, string> = {
+    property_title:     'Property Title Dispute',
+    property_partition: 'Property Partition',
+    encroachment:       'Encroachment',
+    rent_tenancy:       'Rent and Tenancy',
+    family_succession:  'Family and Succession',
+    contract_dispute:   'Contract Dispute',
+    rera_builder:       'RERA / Builder Issue',
+    cheque_bounce:      'Cheque Bounce',
+    others:             'Others',
+  };
+
+  const category = categoryMap[selectedId];
+
+  if (!category) {
     await twilioClient.messages.create({
       from: process.env.TWILIO_WHATSAPP_FROM!,
       to: from,
-      body: "❌ Please reply with 1, 2 or 3..."
+      body: '❌ Please select a case type from the list.',
     });
-    return new Response("", { status: 200 });
+    return new Response('', { status: 200 });
   }
 
-  userState.set(from, "ai_intake");
-
-  // Reset conversation for AI
+  userState.set(from, 'ai_intake');
   conversations.set(from, []);
 
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
-    body: `✅ ${category} case selected.
-
-Please describe your issue in detail.`
+    body: `✅ ${category} selected.\n\nPlease describe your issue in detail.`,
   });
 
-  return new Response("", { status: 200 });
+  return new Response('', { status: 200 });
 }
+
+
+
 
 if (action.includes("contact")) {
   await twilioClient.messages.create({
