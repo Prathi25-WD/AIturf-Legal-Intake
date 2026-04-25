@@ -192,9 +192,15 @@ if (
 
 Select your case type:
 
-1️⃣ Civil  
-2️⃣ Criminal  
-3️⃣ Corporate  
+1️⃣ Property Title Dispute
+2️⃣ Propoerty Partition 
+3️⃣ Encroachment
+4️⃣ Rent and Tenancy
+5️⃣ Family and Succession
+6️⃣ Contract Dispute
+7️⃣ Rera/Builder issue
+8️⃣ Cheque Bounce
+9️⃣ Others
 
 Reply with 1, 2, or 3`
   });
@@ -210,7 +216,7 @@ if (userState.get(from) === "choose_category") {
   else if (body === "4") category = "Rent and Tenancy";
   else if (body === "5") category = "Family and Succession";
   else if (body === "6") category = "Contract Dispute";
-  else if (body === "7") category = "Rera/Buider issue";
+  else if (body === "7") category = "Rera/Builder issue";
   else if (body === "8") category = "Cheque Bounce";
   else if (body === "9") category = "Others";
   else {
