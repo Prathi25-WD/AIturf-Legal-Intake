@@ -184,7 +184,8 @@ if (action.includes("new consultation") || buttonPayload === "🧠 New Consultat
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
-    body: `🧠 *New Consultation*\n\nSelect your case type:\n\n1️⃣ Property Title Dispute\n2️⃣ Property Partition\n3️⃣ Encroachment\n4️⃣ Rent and Tenancy\n5️⃣ Family and Succession\n6️⃣ Contract Dispute\n7️⃣ RERA/Builder Issue\n8️⃣ Cheque Bounce\n9️⃣ Others\n\nReply with a number 1-9`,
+    contentSid: "HX8e74f927c21dd4361ea42443ae412",
+    // NO body field here
   });
 
   return new Response("", { status: 200 });
