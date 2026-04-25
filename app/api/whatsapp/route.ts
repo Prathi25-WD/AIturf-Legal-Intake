@@ -184,7 +184,7 @@ if (action.includes("new consultation") || buttonPayload === "🧠 New Consultat
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
     to: from,
-    contentSid: "HX8e74f927c21dd4361ea42443ae412",
+    contentSid: "HX8e74f927c21dd4361ea42443ae41278a",
     // NO body field here
   });
 
