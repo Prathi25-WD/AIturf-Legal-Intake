@@ -178,20 +178,16 @@ _Our team will review your case before consultation._`;
   return new Response("", { status: 200 });
 }
 
-if (
-  buttonPayload === "🧠 New Consultation" ||
-  buttonPayload === "new_consult" ||
-  action === "2"
-) {
+if (action.includes("new consultation") || buttonPayload === "🧠 New Consultation") {
   userState.set(from, "choose_category");
 
   await twilioClient.messages.create({
-  from: process.env.TWILIO_WHATSAPP_FROM!,
-  to: from,
-  contentSid: "HX8e74f927c21dd4361ea42443ae412",
-  
-});
-return new Response("", { status: 200 });
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    contentSid:"HX8e74f927c21dd4361ea42443ae412",
+  });
+
+  return new Response("", { status: 200 });
 }
 
 if (userState.get(from) === 'choose_category') {
