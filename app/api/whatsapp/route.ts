@@ -21,6 +21,8 @@ const conversations = new Map<string, { role: "user" | "assistant"; content: str
 
 const userState = new Map<string, string>();
 
+const userPhoneInput = new Map<string, string>();
+
 // ── JSON extractor (same as your web chat) ──
 function extractJSON(text: string): Record<string, unknown> | null {
   try {
@@ -50,6 +52,7 @@ async function saveBrief(brief: Record<string, unknown>, phone: string) {
       urgency:       brief.urgency as string,
       questions_for_professional: brief.questionsForProfessional as string[],
       raw_brief:     brief,
+      status:        'whatsapp',
     });
     if (error) console.error("Supabase save error:", error.message);
     else console.log("WhatsApp brief saved for:", phone);
@@ -140,8 +143,9 @@ if (action.includes("check")) {
 
 // When user sends phone number
 if (/^\d{10}$/.test(body)) {
+  userPhoneInput.set(from, body);
  const cleanPhone = body.replace(/\D/g, "");
-
+ 
 const { data } = await supabase
   .from("intake_briefs")
   .select("*")
@@ -273,7 +277,10 @@ if (action.includes("contact")) {
 
     if (briefData && briefData.clientName) {
       // Save brief to Supabase
-      await saveBrief(briefData, from.replace("whatsapp:", ""));
+      const finalPhone =
+       userPhoneInput.get(from) || from.replace("whatsapp:", "");
+
+       await saveBrief(briefData, finalPhone);
       // Format a human-readable summary for WhatsApp
       messageToSend = formatBriefForWhatsApp(briefData);
       // Clear the conversation after brief is complete

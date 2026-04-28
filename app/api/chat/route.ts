@@ -39,6 +39,7 @@ async function saveBrief(brief: Record<string, unknown>) {
         urgency:       brief.urgency as string,
         questions_for_professional: brief.questionsForProfessional as string[],
         raw_brief:     brief,
+        status:     'web_chat',   
       });
 
     if (error) {

@@ -16,6 +16,7 @@ type IntakeBrief = {
   recommended_forum: string;
   created_at: string;
   status?: string;
+  source?:string;
 };
  
 type ManualClientForm = {
@@ -107,38 +108,38 @@ const INTAKES = [
     questions:["RERA registration number of project?","Any extension agreement signed?"],
     time:"Apr 13, 9:45 AM" },
 ];
- 
+ // ── MOCK CASE (temporary) ──
 const CASES = [
   { id:"CS-2024-089", client:"Anand Murthy", type:"PROPERTY_TITLE", tc:"#2d6a4f",
-    stage:"Evidence", sc:"#1e4d8c", next:"Apr 22, 2026",
+    cnr: "KABC010051322015",stage:"Evidence", sc:"#1e4d8c", next:"Apr 22, 2026",
     court:"City Civil Court", judge:"A.V. Nataraj, J.", suit:"OS 1241/2024",
     status:"active", value:"Rs.42L", docs:14,
     last:"Written statement filed Apr 2. Rejoinder due Apr 20.",
     tl:[{d:"Apr 12, 2026",e:"Written statement received from defendant"},
         {d:"Mar 28, 2026",e:"Summons served to defendant"},
         {d:"Feb 10, 2026",e:"Plaint filed — admitted by City Civil Court"}] },
-  { id:"CS-2024-076", client:"Lakshmi Devi", type:"FAMILY_SUCCESSION", tc:"#1e4d8c",
+  { id:"CS-2024-076", client:"Lakshmi Devi", type:"FAMILY_SUCCESSION",cnr: "KABC010051322015", tc:"#1e4d8c",
     stage:"Mediation", sc:"#1a6470", next:"Apr 29, 2026",
     court:"Family Court", judge:"Sunita Rao, J.", suit:"HMP 78/2024",
     status:"active", value:"Rs.1.1Cr", docs:9,
     last:"Mediation notice issued Mar 28. Session 2 scheduled.",
     tl:[{d:"Mar 28, 2026",e:"Mediation session 1 — partial progress"},
         {d:"Jan 22, 2026",e:"OS filed — partition suit admitted"}] },
-  { id:"CS-2025-012", client:"Mohan Rao", type:"CHEQUE_BOUNCE", tc:"#a63232",
+  { id:"CS-2025-012", client:"Mohan Rao", type:"CHEQUE_BOUNCE",cnr: "KABC010051322015", tc:"#a63232",
     stage:"Arguments", sc:"#8b6914", next:"May 6, 2026",
     court:"JMFC Court 14", judge:"Ravi Kumar, MM.", suit:"CC 234/2025",
     status:"active", value:"Rs.8.5L", docs:6,
     last:"Cross-examination completed Apr 10. Written arguments due May 6.",
     tl:[{d:"Apr 10, 2026",e:"Cross-examination of complainant completed"},
         {d:"Jan 8, 2025",e:"Complaint filed under NI Act S.138"}] },
-  { id:"CS-2023-145", client:"Sujatha K.", type:"CIVIL_INJUNCTION", tc:"#8b6914",
+  { id:"CS-2023-145", client:"Sujatha K.", type:"CIVIL_INJUNCTION",cnr: "KABC010051322015", tc:"#8b6914",
     stage:"Decree", sc:"#2d6a4f", next:null,
     court:"City Civil Court", judge:"B.M. Patil, J.", suit:"OS 445/2023",
     status:"won", value:"Rs.28L", docs:22,
     last:"Decree passed Apr 3. Permanent injunction granted.",
     tl:[{d:"Apr 3, 2026",e:"Decree passed — permanent injunction granted"},
         {d:"Nov 5, 2023",e:"Suit filed — interim injunction granted ex-parte"}] },
-  { id:"CS-2025-031", client:"Ibrahim Khan", type:"RENT_TENANCY", tc:"#1a6470",
+  { id:"CS-2025-031", client:"Ibrahim Khan", type:"RENT_TENANCY", cnr: "KABC010051322015",tc:"#1a6470",
     stage:"Filing", sc:"#1e4d8c", next:"Apr 25, 2026",
     court:"Small Causes Court", judge:"TBD", suit:"RCP 12/2025",
     status:"active", value:"Rs.1.4L", docs:3,
@@ -451,10 +452,14 @@ function NewEnquiries({ nav }: { nav: (s: string, d?: any) => void }) {
   }, []);
  
   const filtered = filter === "all"
-    ? entries
-    : entries.filter(e => (e.status || "new") === filter);
+  ? entries
+  : filter === "new"
+    ? entries.filter(e => !e.status || e.status === "new")
+    : filter === "whatsapp" || filter === "web_chat" || filter === "manual"
+      ? entries.filter(e => e.source === filter)
+      : entries.filter(e => e.status === filter);
  
-  const newCount = entries.filter(e => !e.status || e.status === "new").length;
+  const newCount = entries.filter(e => !e.status || e.status === "new")
  
   function fmt(iso: string) {
     return new Date(iso).toLocaleString("en-IN", {
@@ -462,16 +467,17 @@ function NewEnquiries({ nav }: { nav: (s: string, d?: any) => void }) {
       hour: "2-digit", minute: "2-digit",
     });
   }
+  const newenquiresnum = entries.filter(e => !e.status || e.status === "new").length
  
   return (
     <div>
-      <SectionTitle sub={newCount + " new briefs awaiting review"}>
+      <SectionTitle sub={newenquiresnum + " new briefs awaiting review"}>
         New Enquiries
       </SectionTitle>
  
       {/* Filter buttons */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {["all","new","reviewed","manual_entry"].map(f => (
+        {["all","new","reviewed","manual_entry","web_chat","whatsapp"].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: "5px 14px", borderRadius: 20,
             fontSize: 11, fontWeight: 700, cursor: "pointer",
@@ -479,7 +485,8 @@ function NewEnquiries({ nav }: { nav: (s: string, d?: any) => void }) {
             color: filter === f ? "#fff" : P.muted,
             border: "1px solid " + (filter === f ? P.accent : P.border),
             fontFamily: "inherit",
-          }}>{f === "manual_entry" ? "MANUAL" : f.toUpperCase()}</button>
+          }}>{f === "manual_entry" ? "MANUAL" : f.toUpperCase()}
+             </button>
         ))}
       </div>
  
@@ -514,9 +521,14 @@ function NewEnquiries({ nav }: { nav: (s: string, d?: any) => void }) {
                     <span style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>
                       {e.client_name || "Unnamed Client"}
                     </span>
+                    {/* Source badges — shows WHERE the entry came from */}
+                    {e.source === 'whatsapp' && <Pill label='WHATSAPP' color='#1565C0' />}
+                    {e.source === 'web_chat' && <Pill label='WEB CHAT' color='#2E7D32' />}
+                    {e.source === 'manual'   && <Pill label='MANUAL'   color='#E65100' />}
+
                     {isNew && <Pill label="NEW" color={P.accent} />}
                     {e.status === "reviewed" && <Pill label="REVIEWED" color={P.teal} />}
-                    {e.status === "manual_entry" && <Pill label="MANUAL" color={P.blue} />}
+                    
                   </div>
                   <div style={{ fontSize: 12, color: P.muted }}>
                     {e.service_type || "General Enquiry"}
@@ -596,7 +608,8 @@ function AddClient() {
         service_type:  form.service_type,
         recommended_forum: form.recommended_forum,
         fact_summary:  form.fact_summary.trim(),
-        status:        "manual_entry",
+        status:        "new",
+        source:        "manual",
         created_at:    new Date().toISOString(),
       }]);
       if (error) throw error;
@@ -1112,6 +1125,16 @@ function CaseDetail({ item, nav }: {
   nav: (s: string, d?: any) => void;
 }) {
   const [tab, setTab] = useState("overview");
+  const openCourtCase = () => {
+  if (!item?.cnr) {
+    alert("CNR not available");
+    return;
+  }
+
+  const url = `https://services.ecourts.gov.in/ecourtindia_v6/?p=casestatus/index&cino=${item.cnr}`;
+
+  window.open(url, "_blank");
+};
   return (
     <div>
       <BackLink onClick={() => nav("cases")}>← Back to Cases</BackLink>
@@ -1138,6 +1161,7 @@ function CaseDetail({ item, nav }: {
             border: "1px solid " + P.border, borderRadius: 6,
             fontSize: 11, cursor: "pointer", fontFamily: "inherit",
           }}>📎 Docs ({item.docs})</button>
+          
         </div>
       </div>
       <div style={{ display: "flex", borderBottom: "1px solid " + P.border,
@@ -1158,6 +1182,7 @@ function CaseDetail({ item, nav }: {
             <Card>
               <SecLabel>Case Details</SecLabel>
               <Row label="Court" value={item.court} />
+              <Row label="CNR Number" value={item.cnr} />
               <Row label="Judge" value={item.judge} />
               <Row label="Suit Value" value={item.value} />
               <Row label="Stage" value={item.stage} valueColor={item.sc} />
@@ -1198,6 +1223,19 @@ function CaseDetail({ item, nav }: {
             border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700,
             cursor: "pointer", fontFamily: "inherit",
           }}>Upload Details</button>
+          <button onClick={openCourtCase} style={{
+              padding: "7px 16px",
+              background: "#16a34a",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}>
+              🔎 Court Status ↗
+            </button>
          
         </div>
         </div>
@@ -1750,7 +1788,7 @@ function Tools() {
  
 const NAV_ITEMS: NavItem[] = [
   { key: "overview",    label: "Overview",        icon: "◉" },
-  { key: "enquiries",   label: "New Enquiries",   icon: "🆕", badge: 2 },
+  { key: "enquiries",   label: "New Enquiries",   icon: "🆕"},
   { key: "add-client",  label: "Add Client",      icon: "✍️" },
   { key: "intake",      label: "Intake Briefs",   icon: "📋", badge: 2 },
   { key: "cases",       label: "Cases",           icon: "⚖️" },
@@ -1884,13 +1922,22 @@ export default function App() {
                     {item.label}
                   </span>
                 </div>
-                {item.badge && (
-                  <span style={{ fontSize: 9, fontWeight: 700,
-                    background: P.rose, color: "#fff",
-                    borderRadius: 10, padding: "1px 6px" }}>
-                    {item.badge}
-                  </span>
-                )}
+                {item.key === "enquiries"
+                    ? entries.filter(e => !e.status || e.status === "new").length > 0 && (
+                        <span style={{ fontSize: 9, fontWeight: 700,
+                          background: P.rose, color: "#fff",
+                          borderRadius: 10, padding: "1px 6px" }}>
+                          {entries.filter(e => !e.status || e.status === "new").length}
+                        </span>
+                      )
+                    : item.badge && (
+                        <span style={{ fontSize: 9, fontWeight: 700,
+                          background: P.rose, color: "#fff",
+                          borderRadius: 10, padding: "1px 6px" }}>
+                          {item.badge}
+                        </span>
+                      )
+                  }
               </div>
             );
           })}
