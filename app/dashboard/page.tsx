@@ -110,36 +110,36 @@ const INTAKES = [
 ];
  // ── MOCK CASE (temporary) ──
 const CASES = [
-  { id:"CS-2024-089", client:"Anand Murthy", type:"PROPERTY_TITLE", tc:"#2d6a4f",
+  { id:"CS-2024-089", client:"LEENA MADAN K", type:"PROPERTY_TITLE", tc:"#2d6a4f",
     cnr: "KABC010051322015",stage:"Evidence", sc:"#1e4d8c", next:"Apr 22, 2026",
-    court:"City Civil Court", judge:"A.V. Nataraj, J.", suit:"OS 1241/2024",
+    court:"City Civil Court", judge:"A.V. Nataraj, J.", suit:"OS 1950/2015",
     status:"active", value:"Rs.42L", docs:14,
     last:"Written statement filed Apr 2. Rejoinder due Apr 20.",
     tl:[{d:"Apr 12, 2026",e:"Written statement received from defendant"},
         {d:"Mar 28, 2026",e:"Summons served to defendant"},
         {d:"Feb 10, 2026",e:"Plaint filed — admitted by City Civil Court"}] },
-  { id:"CS-2024-076", client:"Lakshmi Devi", type:"FAMILY_SUCCESSION",cnr: "KABC010051322015", tc:"#1e4d8c",
+  { id:"CS-2024-076", client:"Lakshmi Devi", type:"FAMILY_SUCCESSION",cnr: "KABC010051322016", tc:"#1e4d8c",
     stage:"Mediation", sc:"#1a6470", next:"Apr 29, 2026",
     court:"Family Court", judge:"Sunita Rao, J.", suit:"HMP 78/2024",
     status:"active", value:"Rs.1.1Cr", docs:9,
     last:"Mediation notice issued Mar 28. Session 2 scheduled.",
     tl:[{d:"Mar 28, 2026",e:"Mediation session 1 — partial progress"},
         {d:"Jan 22, 2026",e:"OS filed — partition suit admitted"}] },
-  { id:"CS-2025-012", client:"Mohan Rao", type:"CHEQUE_BOUNCE",cnr: "KABC010051322015", tc:"#a63232",
+  { id:"CS-2025-012", client:"Mohan Rao", type:"CHEQUE_BOUNCE",cnr: "KABC010051322017", tc:"#a63232",
     stage:"Arguments", sc:"#8b6914", next:"May 6, 2026",
     court:"JMFC Court 14", judge:"Ravi Kumar, MM.", suit:"CC 234/2025",
     status:"active", value:"Rs.8.5L", docs:6,
     last:"Cross-examination completed Apr 10. Written arguments due May 6.",
     tl:[{d:"Apr 10, 2026",e:"Cross-examination of complainant completed"},
         {d:"Jan 8, 2025",e:"Complaint filed under NI Act S.138"}] },
-  { id:"CS-2023-145", client:"Sujatha K.", type:"CIVIL_INJUNCTION",cnr: "KABC010051322015", tc:"#8b6914",
+  { id:"CS-2023-145", client:"Sujatha K.", type:"CIVIL_INJUNCTION",cnr: "KABC010051322018", tc:"#8b6914",
     stage:"Decree", sc:"#2d6a4f", next:null,
     court:"City Civil Court", judge:"B.M. Patil, J.", suit:"OS 445/2023",
     status:"won", value:"Rs.28L", docs:22,
     last:"Decree passed Apr 3. Permanent injunction granted.",
     tl:[{d:"Apr 3, 2026",e:"Decree passed — permanent injunction granted"},
         {d:"Nov 5, 2023",e:"Suit filed — interim injunction granted ex-parte"}] },
-  { id:"CS-2025-031", client:"Ibrahim Khan", type:"RENT_TENANCY", cnr: "KABC010051322015",tc:"#1a6470",
+  { id:"CS-2025-031", client:"Ibrahim Khan", type:"RENT_TENANCY", cnr: "KABC010051322019",tc:"#1a6470",
     stage:"Filing", sc:"#1e4d8c", next:"Apr 25, 2026",
     court:"Small Causes Court", judge:"TBD", suit:"RCP 12/2025",
     status:"active", value:"Rs.1.4L", docs:3,
@@ -451,11 +451,12 @@ function NewEnquiries({ nav }: { nav: (s: string, d?: any) => void }) {
     load();
   }, []);
  
-  const filtered = filter === "all"
+  
+const filtered = filter === 'all'
   ? entries
-  : filter === "new"
-    ? entries.filter(e => !e.status || e.status === "new")
-    : filter === "whatsapp" || filter === "web_chat" || filter === "manual"
+  : filter === 'new'
+    ? entries.filter(e => !e.status || e.status === 'new')
+    : ['whatsapp', 'web_chat', 'manual'].includes(filter)
       ? entries.filter(e => e.source === filter)
       : entries.filter(e => e.status === filter);
  
@@ -477,7 +478,7 @@ function NewEnquiries({ nav }: { nav: (s: string, d?: any) => void }) {
  
       {/* Filter buttons */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {["all","new","reviewed","manual_entry","web_chat","whatsapp"].map(f => (
+        {["all", "new", "reviewed", "web_chat", "whatsapp", "manual"].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: "5px 14px", borderRadius: 20,
             fontSize: 11, fontWeight: 700, cursor: "pointer",
@@ -485,8 +486,9 @@ function NewEnquiries({ nav }: { nav: (s: string, d?: any) => void }) {
             color: filter === f ? "#fff" : P.muted,
             border: "1px solid " + (filter === f ? P.accent : P.border),
             fontFamily: "inherit",
-          }}>{f === "manual_entry" ? "MANUAL" : f.toUpperCase()}
-             </button>
+          }}>
+            {f === "web_chat" ? "WEB CHAT" : f === "whatsapp" ? "WHATSAPP" : f.toUpperCase()}
+          </button>
         ))}
       </div>
  
@@ -521,14 +523,17 @@ function NewEnquiries({ nav }: { nav: (s: string, d?: any) => void }) {
                     <span style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>
                       {e.client_name || "Unnamed Client"}
                     </span>
-                    {/* Source badges — shows WHERE the entry came from */}
-                    {e.source === 'whatsapp' && <Pill label='WHATSAPP' color='#1565C0' />}
-                    {e.source === 'web_chat' && <Pill label='WEB CHAT' color='#2E7D32' />}
-                    {e.source === 'manual'   && <Pill label='MANUAL'   color='#E65100' />}
 
-                    {isNew && <Pill label="NEW" color={P.accent} />}
-                    {e.status === "reviewed" && <Pill label="REVIEWED" color={P.teal} />}
-                    
+                      {/* Status badges */}
+                      {(!e.status || e.status === 'new') && <Pill label="NEW" color={P.accent} />}
+                      {e.status === 'reviewed'           && <Pill label="REVIEWED" color={P.teal} />}
+                      {e.status === 'closed'             && <Pill label="CLOSED" color={P.dim} />}
+
+                      {/* Source badges */}
+                      {e.source === 'whatsapp'     && <Pill label="WHATSAPP" color="#1565C0" />}
+                      {e.source === 'web_chat'     && <Pill label="WEB CHAT" color="#2E7D32" />}
+                      {e.source === 'manual'       && <Pill label="MANUAL" color="#E65100" />}
+                                          
                   </div>
                   <div style={{ fontSize: 12, color: P.muted }}>
                     {e.service_type || "General Enquiry"}
@@ -1125,16 +1130,302 @@ function CaseDetail({ item, nav }: {
   nav: (s: string, d?: any) => void;
 }) {
   const [tab, setTab] = useState("overview");
-  const openCourtCase = () => {
+  const [courtData, setCourtData]     = useState<any>(null);
+const [courtLoading, setCourtLoading] = useState(false);
+const [courtError, setCourtError]   = useState<string | null>(null);
+const [lastSource, setLastSource]   = useState<string | null>(null);
+const [showAllOrders, setShowAllOrders] = useState(false);
+
+ async function fetchCourtStatus() {
   if (!item?.cnr) {
-    alert("CNR not available");
+    setCourtError('No CNR number available for this case.');
     return;
   }
+  setCourtLoading(true);
+  setCourtError(null);
+  try {
+    const res  = await fetch(`/api/court-status?cnr=${item.cnr}`);
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'API call failed');
+    setCourtData(json.data);
+    setLastSource(json.source);
+    if (json.warning) setCourtError(json.warning);
+  } catch (err: any) {
+    setCourtError(err.message);
+  } finally {
+    setCourtLoading(false);
+  }
+}
+async function fetchAiBrief(pdfUrl: string, purpose: string) {
+  const win = window.open('', '_blank');
+  if (!win) { alert('Please allow popups for this site'); return; }
 
-  const url = `https://services.ecourts.gov.in/ecourtindia_v6/?p=casestatus/index&cino=${item.cnr}`;
+  // Loading screen
+  const loadingBlob = new Blob([`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>AI Brief</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>body{font-family:'Source Sans 3',sans-serif;max-width:700px;margin:60px auto;
+padding:0 24px;background:#f5f2ed;color:#2c2417;text-align:center;}
+.spinner{font-size:32px;margin-bottom:16px;}</style></head>
+<body><div class="spinner">⚖️</div>
+<p style="color:#6b5e4a;font-size:15px;">Reading order and generating brief...</p>
+</body></html>`], { type: 'text/html;charset=utf-8' });
+  win.location.href = URL.createObjectURL(loadingBlob);
 
-  window.open(url, "_blank");
-};
+  try {
+    const res = await fetch('/api/order-brief', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: pdfUrl, cnr: item.cnr, purpose }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error);
+
+    const b = json.brief;
+    const isLegacy = json.isLegacy;
+
+    // Confidence badge helper
+    function confidenceBadge(level: string) {
+      const map: Record<string, [string, string]> = {
+        high:   ['#2d6a4f', '#e8f5ee'],
+        medium: ['#8b6914', '#fef9ec'],
+        low:    ['#a63232', '#fdf0f0'],
+      };
+      const [color, bg] = map[level] || map.medium;
+      return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;
+        background:${bg};color:${color};border:1px solid ${color}30;
+        text-transform:uppercase;letter-spacing:0.05em;">${level}</span>`;
+    }
+
+    const genDate = b.generatedAt
+      ? new Date(b.generatedAt).toLocaleString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        })
+      : new Date().toLocaleString('en-IN');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AI Brief — ${purpose}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Source Sans 3', system-ui, sans-serif; max-width: 700px;
+           margin: 40px auto; padding: 0 24px 60px; color: #2c2417; background: #f5f2ed; }
+    h1   { font-family: 'Lora', Georgia, serif; font-size: 26px; color: #2d6a4f; margin: 0; }
+    .meta { font-size: 12px; color: #6b5e4a; margin-top: 4px; }
+    .header { border-bottom: 2px solid #2d6a4f; padding-bottom: 16px; margin-bottom: 24px; }
+    .section-label { font-size: 10px; font-weight: 700; color: #a0917c;
+                     letter-spacing: 0.1em; text-transform: uppercase;
+                     margin: 28px 0 10px; }
+    .what-happened { font-size: 14px; line-height: 1.9; color: #2c2417;
+                     background: #fff; border-radius: 8px; padding: 14px 16px;
+                     border: 1px solid #e2ddd4; }
+    .item { background: #fff; border: 1px solid #e2ddd4; border-radius: 8px;
+            padding: 12px 14px; margin-bottom: 8px; }
+    .item-text { font-size: 13.5px; color: #2c2417; line-height: 1.6; margin-bottom: 6px; }
+    .citation { font-size: 11px; color: #1e4d8c; font-style: italic; }
+    .risk-item { background: #fff; border: 1px solid #e2ddd4; border-radius: 8px;
+                 padding: 12px 14px; margin-bottom: 8px;
+                 border-left: 3px solid #a63232; }
+    .risk-header { display: flex; justify-content: space-between;
+                   align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+    .confidence-reason { font-size: 11px; color: #a0917c; margin-top: 4px; font-style: italic; }
+    .authority-item { display: flex; gap: 10px; padding: 8px 0;
+                      border-bottom: 1px solid #e2ddd4; font-size: 13px; }
+    .authority-name { font-weight: 700; color: #1e4d8c; flex: 1; }
+    .authority-ref  { color: #6b5e4a; font-size: 12px; }
+    .action-btn { display: inline-block; margin-top: 8px; padding: 5px 14px;
+                  background: #1e4d8c; color: #fff; border-radius: 5px;
+                  font-size: 11px; font-weight: 700; cursor: pointer;
+                  border: none; font-family: inherit; }
+    .disclaimer { margin-top: 28px; padding: 14px 18px; background: #fef9ec;
+                  border: 1px solid rgba(139,105,20,0.25); border-radius: 8px;
+                  font-size: 12px; color: #8b6914; line-height: 1.7; }
+    .actions { margin-top: 20px; display: flex; gap: 10px; }
+    .btn-print { padding: 8px 20px; background: #2d6a4f; color: #fff;
+                 border: none; border-radius: 6px; font-size: 13px;
+                 cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-copy  { padding: 8px 20px; background: #f0ece4; color: #2c2417;
+                 border: 1px solid #e2ddd4; border-radius: 6px; font-size: 13px;
+                 cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-back  { padding: 8px 20px; background: #f0ece4; color: #2c2417;
+             border: 1px solid #e2ddd4; border-radius: 6px; font-size: 13px;
+             cursor: pointer; font-family: inherit; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div style="font-size:10px;font-weight:700;color:#a0917c;letter-spacing:0.1em;
+                text-transform:uppercase;margin-bottom:6px;">
+      AI Order Brief · ${item.cnr}
+    </div>
+    <h1>${purpose}</h1>
+    <div class="meta">${item.client} · ${item.court}</div>
+  </div>
+
+  ${isLegacy ? `<div style="white-space:pre-wrap;font-size:14px;line-height:1.9;">${b}</div>` : `
+
+  <!-- WHAT HAPPENED -->
+  <div class="section-label">What Happened</div>
+  <div class="what-happened">${b.whatHappened || '—'}</div>
+
+  <!-- KEY DIRECTIONS -->
+  <div class="section-label">Key Directions</div>
+  ${(b.keyDirections || []).map((d: any) => `
+    <div class="item">
+      <div class="item-text">${d.direction}</div>
+      ${d.citation ? `<div class="citation">📎 ${d.citation}</div>` : ''}
+    </div>`).join('') || '<div class="item"><div class="item-text">None recorded.</div></div>'}
+
+  <!-- NEXT STEPS -->
+  <div class="section-label">Next Steps for Advocate</div>
+  ${(b.nextSteps || []).map((s: any) => `
+    <div class="item">
+      <div class="item-text">${s.step}</div>
+      ${s.action && s.action !== 'none' ? `
+        <button class="action-btn"
+          onclick="window.opener?.postMessage({action:'${s.action}'},'*'); window.close();">
+          ✨ ${s.actionLabel || 'Open in Dashboard'}
+        </button>` : ''}
+    </div>`).join('') || '<div class="item"><div class="item-text">No immediate steps required.</div></div>'}
+
+  <!-- RISK FLAGS -->
+  <div class="section-label">Risk Flags</div>
+  ${(b.riskFlags || []).map((r: any) => `
+    <div class="risk-item">
+      <div class="risk-header">
+        <div class="item-text" style="margin:0;">${r.flag}</div>
+        ${confidenceBadge(r.confidence || 'medium')}
+      </div>
+      ${r.citation ? `<div class="citation">📎 ${r.citation}</div>` : ''}
+      ${r.confidenceReason ? `<div class="confidence-reason">${r.confidenceReason}</div>` : ''}
+    </div>`).join('') || '<div class="item"><div class="item-text">No risk flags identified.</div></div>'}
+
+  <!-- CITED AUTHORITIES -->
+  ${(b.citedAuthorities || []).length > 0 ? `
+  <div class="section-label">Cited Authorities</div>
+  <div style="background:#fff;border:1px solid #e2ddd4;border-radius:8px;padding:4px 14px;">
+    ${b.citedAuthorities.map((a: any) => `
+      <div class="authority-item">
+        <div class="authority-name">§ ${a.name}</div>
+        <div class="authority-ref">${a.reference}</div>
+      </div>`).join('')}
+  </div>` : ''}
+
+  `}
+
+  <!-- DISCLAIMER -->
+  <div class="disclaimer">
+    ⚠ AI-generated summary. Always read the original order before appearing in court.
+    <br>
+    <span style="font-size:11px;color:#a0917c;">
+      Generated ${genDate} · ${b.modelNote || 'claude-sonnet-4-20250514'}
+    </span>
+  </div>
+
+  <div class="actions">
+    <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+    <button class="btn-copy" onclick="navigator.clipboard.writeText(document.body.innerText)">
+      📋 Copy Text
+    </button>
+    <button class="btn-back" onclick="window.close()">← Back</button>
+  </div>
+
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    win.location.href = URL.createObjectURL(blob);
+
+  } catch (err: any) {
+    const errBlob = new Blob([`<!DOCTYPE html><html><body style="font-family:sans-serif;
+      padding:40px;color:#a63232;">Error: ${err.message}</body></html>`],
+      { type: 'text/html;charset=utf-8' });
+    win.location.href = URL.createObjectURL(errBlob);
+  }
+}
+function openDailyStatus(h: any) {
+  const win = window.open('', '_blank');
+  if (!win) { alert('Please allow popups for this site'); return; }
+
+  const petitioner = courtData?.petitioner_and_advocate?.split('(')[0]?.trim() || '—';
+  const respondent = courtData?.respondent_and_advocate?.split('(')[0]?.trim() || '—';
+
+  const rows = [
+    ['Business',           h.purpose || '—'],
+    ['Hearing Date',       h.hearing_date || '—'],
+    ['Nature of Disposal', courtData?.disposal_type_raw || '—'],
+    ['Disposal Date',      courtData?.decision_date || '—'],
+  ];
+
+  const html = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Daily Status — ${h.date}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: 'Source Sans 3', system-ui, sans-serif;
+             max-width: 580px; margin: 60px auto; padding: 0 24px;
+             color: #2c2417; background: #f5f2ed; }
+      h1   { font-family: 'Lora', Georgia, serif; font-size: 24px;
+             color: #2c2417; margin: 0 0 20px; text-align: center; }
+      .court-block { text-align: center; font-size: 13px; color: #6b5e4a;
+                     line-height: 2; padding: 16px; background: #fff;
+                     border-radius: 10px; margin-bottom: 20px;
+                     border: 1px solid #e2ddd4; }
+      .court-block strong { color: #2c2417; }
+      .row  { display: flex; padding: 10px 0;
+              border-bottom: 1px solid #e2ddd4; font-size: 13px; }
+      .row-label { color: #a0917c; width: 180px; flex-shrink: 0; }
+      .row-value { color: #2c2417; font-weight: 600; }
+      .judge-line { text-align: right; font-size: 12px; color: #6b5e4a;
+                    margin-top: 14px; font-style: italic; }
+      .actions { margin-top: 24px; display: flex; gap: 10px; padding-bottom: 60px; }
+      button { padding: 8px 20px; border-radius: 6px; font-size: 13px;
+               cursor: pointer; font-family: inherit; font-weight: 600; border: none; }
+      .btn-pdf   { background: #f0ece4; color: #2c2417;
+                   border: 1px solid #e2ddd4 !important; }
+      .btn-close { background: #1e4d8c; color: #fff; }
+    </style>
+  </head>
+  <body>
+    <h1>Daily Status</h1>
+    <div class="court-block">
+      <div><strong>${courtData?.court_name || item.court}</strong></div>
+      <div>In the court of: ${h.judge || courtData?.judge || item.judge || '—'}</div>
+      <div>CNR Number: <strong>${item.cnr}</strong></div>
+      <div>Case Number: <strong>${item.suit}</strong></div>
+      <div><strong>${petitioner}</strong> versus <strong>${respondent}</strong></div>
+      <div>Date: <strong>${h.date}</strong></div>
+    </div>
+    ${rows.map(([label, value]) => `
+      <div class="row">
+        <span class="row-label">${label}</span>
+        <span class="row-value">${value}</span>
+      </div>`).join('')}
+    <div class="judge-line">
+      ${h.judge || courtData?.judge || item.judge || ''}
+    </div>
+    <div class="actions">
+      ${h.pdf_url ? `
+        <button class="btn-pdf" onclick="window.open('/api/court-pdf?file=${encodeURIComponent(h.pdf_url)}&cnr=${encodeURIComponent(item.cnr)}', '_blank')">
+          📄 Download Order PDF
+        </button>` : ''}
+      <button class="btn-close" onclick="window.close()">Close</button>
+    </div>
+  </body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  win.location.href = URL.createObjectURL(blob);
+}
+
   return (
     <div>
       <BackLink onClick={() => nav("cases")}>← Back to Cases</BackLink>
@@ -1164,18 +1455,57 @@ function CaseDetail({ item, nav }: {
           
         </div>
       </div>
-      <div style={{ display: "flex", borderBottom: "1px solid " + P.border,
-        marginBottom: 16 }}>
-        {["overview","timeline"].map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            padding: "8px 18px", background: "none", border: "none",
-            borderBottom: tab === t ? "2px solid " + P.accent : "2px solid transparent",
-            color: tab === t ? P.accent : P.muted,
-            fontSize: 12, fontWeight: tab === t ? 700 : 400,
-            cursor: "pointer", fontFamily: "inherit", textTransform: "capitalize",
-          }}>{t}</button>
-        ))}
-      </div>
+      <div style={{ display: 'flex', borderBottom: '1px solid ' + P.border, marginBottom: 16 }}>
+
+  {/* Existing Overview tab */}
+  <button onClick={() => setTab('overview')} style={{
+    padding: '8px 18px', background: 'none', border: 'none',
+    borderBottom: tab === 'overview' ? '2px solid ' + P.accent : '2px solid transparent',
+    color: tab === 'overview' ? P.accent : P.muted,
+    fontSize: 12, fontWeight: tab === 'overview' ? 700 : 400,
+    cursor: 'pointer', fontFamily: 'inherit',
+  }}>Overview</button>
+
+  {/* Existing Timeline tab */}
+ <button
+  onClick={() => {
+    setTab('timeline');
+    // Fetch court data if it has not been loaded yet
+    // (same pattern already used by the eCourts Live tab)
+    if (!courtData) fetchCourtStatus();
+  }}
+  style={{
+    padding: '8px 18px', background: 'none', border: 'none',
+    borderBottom: tab === 'timeline' ? '2px solid ' + P.accent : '2px solid transparent',
+    color: tab === 'timeline' ? P.accent : P.muted,
+    fontSize: 12, fontWeight: tab === 'timeline' ? 700 : 400,
+    cursor: 'pointer', fontFamily: 'inherit',
+  }}
+>Timeline</button>
+
+
+  {/* NEW: eCourts Live tab */}
+  <button
+    onClick={() => { setTab('ecourts'); if (!courtData) fetchCourtStatus(); }}
+    style={{
+      padding: '8px 18px', background: 'none', border: 'none',
+      borderBottom: tab === 'ecourts' ? '2px solid ' + P.accent : '2px solid transparent',
+      color: tab === 'ecourts' ? P.accent : P.muted,
+      fontSize: 12, fontWeight: tab === 'ecourts' ? 700 : 400,
+      cursor: 'pointer', fontFamily: 'inherit', display: 'flex',
+      alignItems: 'center', gap: 6,
+    }}
+  >
+    eCourts Live
+    <span style={{
+      fontSize: 8, fontWeight: 700, padding: '1px 5px',
+      borderRadius: 8, background: P.accent + '20',
+      color: P.accent, border: '1px solid ' + P.accent + '40',
+    }}>NEW</span>
+  </button>
+
+</div>
+
       {tab === "overview" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1223,54 +1553,547 @@ function CaseDetail({ item, nav }: {
             border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700,
             cursor: "pointer", fontFamily: "inherit",
           }}>Upload Details</button>
-          <button onClick={openCourtCase} style={{
-              padding: "7px 16px",
-              background: "#16a34a",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}>
-              🔎 Court Status ↗
-            </button>
+          
          
         </div>
         </div>
         
       )}
-      {tab === "timeline" && (
-        <Card>
-          {item.tl.map((e, i) => (
-            <div key={i} style={{ display: "flex", gap: 14, paddingBottom: 16 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div style={{ width: 9, height: 9, borderRadius: "50%",
-                  background: P.accent, flexShrink: 0, marginTop: 3 }} />
-                {i < item.tl.length - 1 && (
-                  <div style={{ width: 1, flex: 1, background: P.border,
-                    minHeight: 16, marginTop: 4 }} />
+     {tab === 'timeline' && (
+  <Card>
+ 
+    {/* ── LOADING STATE ── */}
+    {courtLoading && !courtData && (
+      <div style={{ padding: 32, textAlign: 'center', color: P.dim, fontSize: 13 }}>
+        Loading order history from eCourts...
+      </div>
+    )}
+ 
+    {/* ── ERROR STATE ── */}
+    {courtError && !courtData && (
+      <div style={{ padding: 16 }}>
+        <div style={{
+          padding: '10px 14px', borderRadius: 7,
+          background: 'rgba(166,50,50,0.08)',
+          border: '1px solid rgba(166,50,50,0.2)',
+          fontSize: 12, color: P.rose, marginBottom: 12,
+        }}>
+          ⚠ {courtError}
+        </div>
+        <button
+          onClick={fetchCourtStatus}
+          style={{
+            padding: '7px 16px', background: P.accent, color: '#fff',
+            border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          ↻ Retry
+        </button>
+      </div>
+    )}
+ 
+    {/* ── EMPTY STATE — data loaded but no orders returned ── */}
+    {courtData && (courtData.timeline_orders || []).length === 0 && (
+      <div style={{ padding: 24, textAlign: 'center', color: P.dim, fontSize: 13 }}>
+        No order history available for this case.
+      </div>
+    )}
+ 
+    {/* ── MAIN TIMELINE — real data from eCourts API ── */}
+    {courtData && (courtData.timeline_orders|| []).map((h: any, i: number) => {
+      // Build the total list length for the connector line logic
+      const total = (courtData.timeline_orders || []).length;
+      return (
+        <div key={i} style={{ display: 'flex', gap: 14, paddingBottom: 20 }}>
+ 
+          {/* Left column: coloured dot + connecting vertical line */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{
+              width: 9, height: 9, borderRadius: '50%',
+              background: i === 0 ? P.accent : P.dim,
+              flexShrink: 0, marginTop: 3,
+            }} />
+            {i < total - 1 && (
+              <div style={{
+                width: 1, flex: 1, background: P.border,
+                minHeight: 16, marginTop: 4,
+              }} />
+            )}
+          </div>
+ 
+          {/* Right column: date, NEW badge, event text, action buttons */}
+          <div style={{ flex: 1 }}>
+ 
+            {/* Row 1: date + NEW badge (only on the first/most recent entry) */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                marginBottom: 2,
+              }}>
+                {/* Date */}
+                <div style={{ fontSize: 10.5, color: P.dim }}>
+                  {h.date || '—'}
+                </div>
+
+                {/* 🟢 ORDER TYPE BADGE */}
+                {h.type === 'judgment' && (
+                  <span style={{
+                    fontSize: 8,
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    borderRadius: 8,
+                    background: 'rgba(0,128,0,0.12)',
+                    color: 'green',
+                    border: '1px solid rgba(0,128,0,0.3)',
+                  }}>
+                    FINAL
+                  </span>
+                )}
+
+                {h.type === 'interim' && (
+                  <span style={{
+                    fontSize: 8,
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    borderRadius: 8,
+                    background: P.s2,
+                    color: P.text,
+                    border: '1px solid ' + P.border,
+                  }}>
+                    ORDER
+                  </span>
+                )}
+
+                {/* 🔵 NEW BADGE */}
+                {i === 0 && (
+                  <span style={{
+                    fontSize: 8,
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    borderRadius: 8,
+                    background: P.accent + '18',
+                    color: P.accent,
+                    border: '1px solid ' + P.accent + '30',
+                  }}>
+                    NEW
+                  </span>
                 )}
               </div>
-              <div>
-                <div style={{ fontSize: 10.5, color: P.dim }}>{e.d}</div>
-                <div style={{ fontSize: 13, color: P.text, marginTop: 2 }}>{e.e}</div>
-              </div>
+ 
+            {/* Row 2: purpose / event description */}
+            <div style={{ fontSize: 13, color: P.text, marginBottom: 4 }}>
+              {h.purpose || h.hearing_purpose || 'Hearing'}
             </div>
-            
-          ))}
-          <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => nav("ai-drafts")} style={{
-            padding: "7px 16px", background: P.blue, color: "#fff",
-            border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700,
-            cursor: "pointer", fontFamily: "inherit",marginTop:"10px"
-          }}>Next Step</button>
-         
+ 
+            {/* Row 3: judge name (if available) */}
+            {h.judge && (
+              <div style={{ fontSize: 11, color: P.muted, marginBottom: 8 }}>
+                {h.judge}
+              </div>
+            )}
+ 
+            {/* Row 4: action buttons */}
+            <div style={{ display: 'flex', gap: 8 }}>
+ 
+              {/* Download PDF — uses pdf_url if the API returns one */}
+              <button
+              // In CaseDetail, Timeline tab — Download PDF button onClick:
+                // In CaseDetail Timeline tab — Download PDF button
+                onClick={async () => {
+                if (!h.pdf_url) { alert('No PDF available'); return; }
+                
+                const proxyUrl = `/api/court-pdf?file=${encodeURIComponent(h.pdf_url)}&cnr=${encodeURIComponent(item.cnr)}`;
+                
+                try {
+                  const res = await fetch(proxyUrl);
+                  if (res.ok) {
+                    const blob = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    window.open(blobUrl, '_blank');
+                  } else {
+                    // Fixed fallback — CNR search lands directly on the case
+                    window.open(
+                      `https://services.ecourts.gov.in/ecourtindia_v6/?p=casestatus/viewCase&type=cnr&cnrNumber=${encodeURIComponent(item.cnr)}&search_by=CNR`,
+                      '_blank'
+                    );
+                  }
+                } catch {
+                  window.open(
+                    `https://services.ecourts.gov.in/ecourtindia_v6/?p=casestatus/viewCase&type=cnr&cnrNumber=${encodeURIComponent(item.cnr)}&search_by=CNR`,
+                    '_blank'
+                  );
+                }
+              }}
+                style={{
+                  fontSize: 10.5, fontWeight: 600,
+                  padding: '4px 12px',
+                  background: P.s2,
+                  border: '1px solid ' + P.border,
+                  borderRadius: 5, cursor: 'pointer',
+                  fontFamily: 'inherit', color: P.text,
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                📄 Download PDF
+              </button>
+ 
+              {/* View AI Brief — placeholder until AI brief panel is built */}
+              <button
+                onClick={() => {
+                  if (h.pdf_url) fetchAiBrief(h.pdf_url, h.purpose || 'Court Order');
+                  else alert('No PDF available for this order');
+                }}
+                style={{
+                  fontSize: 10.5, fontWeight: 600,
+                  padding: '4px 12px',
+                  background: 'rgba(30,77,140,0.10)',
+                  border: '1px solid rgba(30,77,140,0.25)',
+                  borderRadius: 5, cursor: 'pointer',
+                  fontFamily: 'inherit', color: P.blue,
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                ✨ View AI Brief
+              </button>
+ 
+            </div>
+          </div>
         </div>
-        </Card>
-        
+      );
+    })}
+ 
+    {/* ── FOOTER: refresh link + Next Step button ── */}
+    {courtData && (
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', marginTop: 8,
+        paddingTop: 12, borderTop: '1px solid ' + P.border,
+      }}>
+        <button
+          onClick={fetchCourtStatus}
+          disabled={courtLoading}
+          style={{
+            fontSize: 11, color: P.accent, background: 'none',
+            border: 'none', cursor: courtLoading ? 'not-allowed' : 'pointer',
+            fontFamily: 'inherit', fontWeight: 600,
+          }}
+        >
+          {courtLoading ? 'Refreshing...' : '↻ Refresh from eCourts'}
+        </button>
+ 
+        <button
+          onClick={() => nav('ai-drafts')}
+          style={{
+            padding: '7px 16px', background: P.blue, color: '#fff',
+            border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          Next Step
+        </button>
+      </div>
+    )}
+ 
+    {/* ── EMPTY STATE before first fetch ── */}
+    {!courtData && !courtLoading && !courtError && (
+      <div style={{ padding: 32, textAlign: 'center' }}>
+        <div style={{ fontSize: 13, color: P.muted, marginBottom: 10 }}>
+          Click below to load the live order history for this case
+        </div>
+        <button
+          onClick={fetchCourtStatus}
+          style={{
+            padding: '8px 20px', background: P.accent, color: '#fff',
+            border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          ↻ Fetch from eCourts
+        </button>
+      </div>
+    )}
+ 
+  </Card>
+)}
+
+      {tab === 'ecourts' && (
+  <div>
+
+    {/* ── SYNC HEADER BAR ── */}
+    <div style={{
+      background: P.accent, borderRadius: '10px 10px 0 0',
+      padding: '10px 16px', display: 'flex',
+      justifyContent: 'space-between', alignItems: 'center',
+    }}>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
+          ⚡ eCourts Live Feed
+        </div>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
+          CNR: {item.cnr}
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {courtData && !courtLoading && (
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>
+            {lastSource === 'live' ? '● LIVE' : '○ CACHED'}
+          </span>
+        )}
+        <button
+          onClick={fetchCourtStatus}
+          disabled={courtLoading}
+          style={{
+            fontSize: 11, fontWeight: 600, padding: '5px 12px',
+            background: 'rgba(255,255,255,0.15)',
+            color: '#fff', border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 6, cursor: courtLoading ? 'not-allowed' : 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          {courtLoading ? 'Fetching...' : '↻ Refresh'}
+        </button>
+      </div>
+    </div>
+
+    {/* ── PANEL BODY ── */}
+    <div style={{
+      border: '1px solid ' + P.border, borderTop: 'none',
+      borderRadius: '0 0 10px 10px', overflow: 'hidden',
+    }}>
+
+      {/* Loading state */}
+      {courtLoading && !courtData && (
+        <div style={{ padding: 40, textAlign: 'center', color: P.dim, fontSize: 13 }}>
+          Fetching live data from eCourts...
+        </div>
       )}
+
+      {/* Error / warning */}
+      {courtError && (
+        <div style={{
+          padding: '10px 16px', fontSize: 12,
+          background: 'rgba(139,105,20,0.08)',
+          color: P.gold, borderBottom: '1px solid ' + P.border,
+        }}>
+          ⚠ {courtError}
+        </div>
+      )}
+
+      {/* Main data panel */}
+      {courtData && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr',
+          gap: 0,
+        }}>
+
+          {/* LEFT: Status + AI Summary */}
+          <div style={{
+            padding: 16, borderRight: '1px solid ' + P.border,
+            display: 'flex', flexDirection: 'column', gap: 14,
+          }}>
+
+            {/* Current Status */}
+            <div>
+              <div style={{ fontSize: 9.5, fontWeight: 700, color: P.dim,
+                letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Current Status
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>
+                Case is {courtData.case_status || 'PENDING'}</div>
+              {courtData.next_hearing_date && (
+                <div style={{ fontSize: 11.5, color: P.teal, marginTop: 4 }}>
+                  Next listed: {courtData.next_hearing_date}
+                </div>
+              )}
+            </div>
+
+            {/* Latest Order AI Summary */}
+            {courtData.latest_order_summary && (
+              <div style={{
+                background: P.accentL,
+                border: '1px solid rgba(45,106,79,0.15)',
+                borderRadius: 8, padding: '10px 12px',
+              }}>
+                <div style={{ fontSize: 9.5, fontWeight: 700, color: P.accent,
+                  letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  Latest Order — AI Summary
+                </div>
+                <div style={{ fontSize: 12, color: P.text, lineHeight: 1.7 }}>
+                  {courtData.latest_order_summary}
+                </div>
+              </div>
+            )}
+
+            {/* Case Details */}
+            <div>
+              <div style={{ fontSize: 9.5, fontWeight: 700, color: P.dim,
+                letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Case Details
+              </div>
+              {[
+                ['Court',      courtData.court_name || item.court],
+                ['Judge',      courtData.judge      || item.judge],
+                ['Petitioner', courtData.petitioner_and_advocate || '—'],
+                ['Respondent', courtData.respondent_and_advocate || '—'],
+              ].map(([l, v]) => (
+                <div key={l} style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  padding: '5px 0', borderBottom: '1px solid ' + P.border,
+                  fontSize: 11.5,
+                }}>
+                  <span style={{ color: P.dim }}>{l}</span>
+                  <span style={{ color: P.text, fontWeight: 600,
+                    maxWidth: 200, textAlign: 'right', fontSize: 11 }}>
+                    {v}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* External link */}
+            <button
+              onClick={() => window.open('https://services.ecourts.gov.in', '_blank')}
+              style={{
+                fontSize: 11, padding: '6px 0', background: 'none',
+                border: 'none', color: P.blue, cursor: 'pointer',
+                textAlign: 'left', fontFamily: 'inherit', fontWeight: 600,
+              }}
+            >
+              View on eCourts ↗
+            </button>
+          </div>
+
+          {/* RIGHT: Recent Orders */}
+          <div style={{ padding: 16 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: P.dim,
+              letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+              Recent Orders & Updates
+            </div>
+           {(() => {
+  const allOrders = courtData.hearing_dates || courtData.case_history || [];
+  const visibleOrders = showAllOrders ? allOrders : allOrders.slice(0, 6);
+  return (
+    <>
+      {/* Column headers */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1.2fr',
+        gap: 8,
+        padding: '4px 0 8px',
+        borderBottom: '2px solid ' + P.border,
+        marginBottom: 2,
+      }}>
+        {['Business On Date', 'Hearing Date', 'Purpose'].map(col => (
+          <div key={col} style={{
+            fontSize: 9, fontWeight: 700, color: P.dim,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+          }}>{col}</div>
+        ))}
+      </div>
+
+      {/* Data rows */}
+      {visibleOrders.map((h: any, i: number) => (
+        <div key={i} style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1.2fr',
+          gap: 8,
+          padding: '7px 0',
+          borderBottom: '1px solid ' + P.border,
+          alignItems: 'center',
+        }}>
+
+          {/* Business on Date — clickable blue link */}
+          <button
+            onClick={() => openDailyStatus(h)}
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              cursor: 'pointer', textAlign: 'left',
+              fontFamily: 'inherit',
+            }}
+          >
+            <span style={{
+              fontSize: 11.5, color: P.blue,
+              textDecoration: 'underline', fontWeight: 600,
+            }}>
+              {h.date || '—'}
+            </span>
+          </button>
+
+          {/* Hearing Date */}
+          <div style={{ fontSize: 11.5, color: P.text }}>
+            {h.hearing_date || '—'}
+          </div>
+
+          {/* Purpose + NEW badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 11.5, color: P.text }}>
+              {h.purpose || 'Hearing'}
+            </span>
+            {i === 0 && (
+              <span style={{
+                fontSize: 8, fontWeight: 700, padding: '1px 5px',
+                borderRadius: 8, background: P.accent + '18',
+                color: P.accent, border: '1px solid ' + P.accent + '30',
+                flexShrink: 0,
+              }}>NEW</span>
+            )}
+          </div>
+
+        </div>
+      ))}
+
+      {/* View more / Show less */}
+      {allOrders.length > 6 && (
+        <div style={{ paddingTop: 10, textAlign: 'center' }}>
+          <button
+            onClick={() => setShowAllOrders(!showAllOrders)}
+            style={{
+              fontSize: 11, fontWeight: 600, color: P.accent,
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', textDecoration: 'underline',
+            }}
+          >
+            {showAllOrders
+              ? '↑ Show less'
+              : `View full order history (${allOrders.length - 6} more) →`}
+          </button>
+        </div>
+      )}
+
+      {allOrders.length === 0 && (
+        <div style={{ fontSize: 12, color: P.dim, padding: '8px 0' }}>
+          No hearing history available
+        </div>
+      )}
+    </>
+  );
+})()}
+
+          </div>
+        </div>
+      )}
+
+      {/* Empty state - nothing fetched yet */}
+      {!courtData && !courtLoading && !courtError && (
+        <div style={{ padding: 32, textAlign: 'center' }}>
+          <div style={{ fontSize: 13, color: P.muted, marginBottom: 10 }}>
+            Click Refresh to load live court data for this case
+          </div>
+          <button onClick={fetchCourtStatus} style={{
+            padding: '8px 20px', background: P.accent, color: '#fff',
+            border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            ↻ Fetch from eCourts
+          </button>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
       
     </div>
   );
@@ -1347,6 +2170,47 @@ function Deadlines() {
 // ── CALENDAR SCREEN ──
  
 function CalendarView() {
+  const [events, setEvents]       = useState<any[]>([]);
+const [loading, setLoading]     = useState(true);
+const [showAddForm, setShowAddForm] = useState(false);
+const [form, setForm]           = useState({
+  title: '', event_date: '', event_type: 'hearing',
+  client_name: '', cnr_number: '', court: '', notes: '',
+});
+useEffect(() => {
+  async function load() {
+    setLoading(true);
+    const res = await fetch('/api/calendar');
+    const json = await res.json();
+    setEvents(json.events ?? []);
+    setLoading(false);
+  }
+  load();
+}, []);
+async function exportIcs() {
+  const res = await fetch('/api/calendar/export-ics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ events }),
+  });
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'aadya-hearings.ics'; a.click();
+}
+async function addEvent() {
+  await fetch('/api/calendar/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(form),
+  });
+  setShowAddForm(false);
+  // Reload events
+  const res = await fetch('/api/calendar');
+  const json = await res.json();
+  setEvents(json.events ?? []);
+}
+
   const days = [
     {name:"Sun",num:13,tag:null},{name:"Mon",num:14,tag:null},
     {name:"Tue",num:15,tag:null},{name:"Wed",num:16,tag:null},
@@ -1357,7 +2221,7 @@ function CalendarView() {
     {name:"Fri",num:25,tag:{label:"Hearing",color:P.teal}},
     {name:"Sat",num:26,tag:null},
   ];
-  const events = [
+  const mockevents = [
     {day:20,color:P.rose,title:"Anand Murthy — Filing Deadline",sub:"City Civil Court · OS 1241/2024",note:"File Rejoinder before 10:30 AM"},
     {day:22,color:P.teal,title:"Anand Murthy — Evidence Hearing",sub:"City Civil Court Room 7 · OS 1241/2024",note:"Appear for evidence recording"},
     {day:25,color:P.teal,title:"Ibrahim Khan — First Date",sub:"Small Causes Court Room 3 · RCP 12/2025",note:"Present for admission"},
@@ -1365,9 +2229,54 @@ function CalendarView() {
   ];
   return (
     <div>
-      <SectionTitle sub="April 2026 · Synced with Google Calendar">
-        Hearing Calendar
-      </SectionTitle>
+      
+      {/* ── Calendar Header Bar ── */}
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          alignItems: "center", marginBottom: 16,
+        }}>
+          <SectionTitle sub="Hearings, deadlines and events across all cases">
+            Hearing Calendar
+          </SectionTitle>
+          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+
+            {/* Export .ics button */}
+            <button onClick={exportIcs} style={{
+              display: "flex", alignItems: "center", gap: 7,
+              padding: "8px 16px",
+              background: P.s1,
+              border: "1px solid " + P.border,
+              borderRadius: 8, fontSize: 12, fontWeight: 600,
+              color: P.muted, cursor: "pointer", fontFamily: "inherit",
+              transition: "all 0.12s",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = P.teal;
+              e.currentTarget.style.color = P.teal;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = P.border;
+              e.currentTarget.style.color = P.muted;
+            }}
+            >
+              ⬇ Export .ics
+            </button>
+
+            {/* Add Event button */}
+            <button onClick={() => setShowAddForm(true)} style={{
+              display: "flex", alignItems: "center", gap: 7,
+              padding: "8px 16px",
+              background: P.accent,
+              border: "none",
+              borderRadius: 8, fontSize: 12, fontWeight: 700,
+              color: "#fff", cursor: "pointer", fontFamily: "inherit",
+            }}>
+              + Add Event
+            </button>
+
+          </div>
+        </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)",
         gap: 8, marginBottom: 8 }}>
         {days.map((d, i) => (
@@ -1391,38 +2300,427 @@ function CalendarView() {
               </span>
             )}
           </div>
+          
         ))}
       </div>
+      
+
       <div style={{ fontSize: 9.5, fontWeight: 700, color: P.dim,
         letterSpacing: "0.1em", textTransform: "uppercase",
         marginTop: 8, marginBottom: 8 }}>Upcoming Events</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {loading && <div style={{textAlign:'center', color: P.dim}}>Loading hearings...</div>}
+
         {events.map((e, i) => (
-          <Card key={i} accentColor={e.color}>
-            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-              <div style={{ background: e.color + "18",
-                border: "1px solid " + e.color + "30", borderRadius: 8,
-                padding: "8px 14px", textAlign: "center", minWidth: 56 }}>
-                <div style={{ fontFamily: "'Lora', Georgia, serif",
-                  fontSize: 22, fontWeight: 700, color: e.color }}>{e.day}</div>
-                <div style={{ fontSize: 9, color: P.dim }}>APR</div>
+          <Card key={e.id || i} accentColor={
+            e.event_type === 'hearing'  ? P.teal :
+            e.event_type === 'deadline' ? P.rose :
+            e.event_type === 'filing'   ? P.blue : P.gold
+          }>
+            <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+              {/* Date badge */}
+              <div style={{ background: P.tealL, borderRadius:8,
+                            padding:'8px 14px', textAlign:'center', minWidth:56 }}>
+                <div style={{ fontSize:22, fontWeight:700, color: P.teal }}>
+                  {new Date(e.event_date).getDate()}
+                </div>
+                <div style={{ fontSize:9, color: P.dim }}>
+                  {new Date(e.event_date).toLocaleString('en-IN',{month:'short'}).toUpperCase()}
+                </div>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>
-                  {e.title}
+                <div style={{ fontSize:13, fontWeight:700 }}>{e.title}</div>
+                <div style={{ fontSize:11.5, color: P.muted }}>
+                  {e.client_name} · {e.court}
                 </div>
-                <div style={{ fontSize: 11.5, color: P.muted, marginTop: 2 }}>{e.sub}</div>
-                <div style={{ fontSize: 11, color: e.color, marginTop: 2 }}>
-                  → {e.note}
-                </div>
+                {e.source === 'ecourts' && (
+                  <span style={{ fontSize:9, color: P.teal }}>● LIVE FROM ECOURTS</span>
+                )}
               </div>
             </div>
           </Card>
         ))}
+
+              </div>
+              {/* ── Add Event Modal ── */}
+        {showAddForm && (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "flex-end",
+          }} onClick={() => setShowAddForm(false)}>
+
+            <div onClick={e => e.stopPropagation()} style={{
+              width: 420, height: "100vh",
+              background: P.s1,
+              borderLeft: "1px solid " + P.border,
+              display: "flex", flexDirection: "column",
+              boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
+            }}>
+
+              {/* Header */}
+              <div style={{
+                padding: "20px 24px 16px",
+                borderBottom: "1px solid " + P.border,
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                background: P.accentL,
+              }}>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: P.accent }}>
+                    Add Calendar Event
+                  </div>
+                  <div style={{ fontSize: 11, color: P.muted, marginTop: 2 }}>
+                    Saved to Supabase · appears in all calendar views
+                  </div>
+                </div>
+                <button onClick={() => setShowAddForm(false)} style={{
+                  background: "none", border: "none", fontSize: 20,
+                  cursor: "pointer", color: P.muted, lineHeight: 1,
+                }}>×</button>
+              </div>
+
+              {/* Form fields */}
+              <div style={{ padding: "20px 24px", flex: 1, overflowY: "auto" }}>
+                {[
+                  { label: "Event Title *",   field: "title",       type: "text",   placeholder: "e.g. Evidence Hearing — OS 1241" },
+                  { label: "Date *",          field: "event_date",  type: "date",   placeholder: "" },
+                  { label: "Client Name",     field: "client_name", type: "text",   placeholder: "e.g. Anand Murthy" },
+                  { label: "CNR Number",      field: "cnr_number",  type: "text",   placeholder: "e.g. KABC010051322015" },
+                  { label: "Court",           field: "court",       type: "text",   placeholder: "e.g. City Civil Court" },
+                  { label: "Notes",           field: "notes",       type: "textarea", placeholder: "Any notes or instructions..." },
+                ].map(({ label: lbl, field, type, placeholder }) => (
+                  <div key={field} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: P.dim,
+                      letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>
+                      {lbl}
+                    </div>
+                    {type === "textarea" ? (
+                      <textarea
+                        rows={3}
+                        value={(form as any)[field]}
+                        onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
+                        placeholder={placeholder}
+                        style={{ width: "100%", fontSize: 12, padding: "8px 11px",
+                          borderRadius: 7, border: "1px solid " + P.border,
+                          background: P.s2, color: P.text, outline: "none",
+                          fontFamily: "inherit", resize: "vertical" }}
+                      />
+                    ) : (
+                      <input
+                        type={type}
+                        value={(form as any)[field]}
+                        onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
+                        placeholder={placeholder}
+                        style={{ width: "100%", fontSize: 12, padding: "8px 11px",
+                          borderRadius: 7, border: "1px solid " + P.border,
+                          background: P.s2, color: P.text, outline: "none",
+                          fontFamily: "inherit" }}
+                      />
+                    )}
+                  </div>
+                ))}
+
+                {/* Event type selector */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: P.dim,
+                    letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
+                    Event Type
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {["hearing","deadline","filing","meeting"].map(t => (
+                      <button key={t}
+                        onClick={() => setForm(prev => ({ ...prev, event_type: t }))}
+                        style={{
+                          padding: "5px 14px", borderRadius: 20,
+                          fontSize: 11, fontWeight: 700, cursor: "pointer",
+                          background: form.event_type === t ? P.accent : P.s1,
+                          color: form.event_type === t ? "#fff" : P.muted,
+                          border: "1px solid " + (form.event_type === t ? P.accent : P.border),
+                          fontFamily: "inherit",
+                        }}>
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer buttons */}
+              <div style={{ padding: "16px 24px", borderTop: "1px solid " + P.border,
+                display: "flex", gap: 10 }}>
+                <button onClick={addEvent} style={{
+                  flex: 1, padding: "10px", background: P.accent, color: "#fff",
+                  border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>
+                  Save Event
+                </button>
+                <button onClick={() => setShowAddForm(false)} style={{
+                  padding: "10px 20px", background: P.s2, color: P.text,
+                  border: "1px solid " + P.border, borderRadius: 8,
+                  fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+                }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+            </div>
+          );
+        }
+
+// ── DAILY CAUSE LIST SCREEN ──
+
+function DailyCauseList({ nav }: { nav: (s: string, d?: any) => void }) {
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]  // today as YYYY-MM-DD
+  );
+  const [cases, setCases]     = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter]   = useState("all");  // all | court
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const res  = await fetch(`/api/daily-cause-list?date=${selectedDate}`);
+        const json = await res.json();
+        setCases(json.cases ?? []);
+      } catch { setCases([]); }
+      setLoading(false);
+    }
+    load();
+  }, [selectedDate]);
+
+  // Get unique courts for filter tabs
+  const courts = [...new Set(cases.map(c => c.court).filter(Boolean))];
+
+  const filtered = filter === "all"
+    ? cases
+    : cases.filter(c => c.court === filter);
+
+  // Stats
+  const totalCases    = cases.length;
+  const earliestTime  = cases.reduce((min, c) =>
+    c.time && (!min || c.time < min) ? c.time : min, "");
+  const uniqueCourts  = courts.length;
+
+  // Format date for display
+  const displayDate = new Date(selectedDate + "T00:00:00")
+    .toLocaleDateString("en-IN", {
+      weekday: "short", day: "numeric", month: "short", year: "numeric"
+    });
+
+  return (
+    <div>
+
+      {/* ── Header ── */}
+      <div style={{ display: "flex", justifyContent: "space-between",
+        alignItems: "flex-start", marginBottom: 20 }}>
+        <div>
+          <BackLink onClick={() => nav("calendar")}>← Back to Calendar</BackLink>
+          <h2 style={{ margin: 0, fontFamily: "'Lora', Georgia, serif",
+            fontSize: 22, fontWeight: 700, color: P.ink }}>
+            Daily Cause List
+          </h2>
+          <div style={{ fontSize: 12, color: P.dim, marginTop: 3 }}>
+            All firm cases listed across Bengaluru courts on this date
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* SYNC badge */}
+          <span style={{ fontSize: 9, fontWeight: 700,
+            padding: "3px 10px", borderRadius: 10,
+            background: P.accent, color: "#fff",
+            letterSpacing: "0.08em" }}>SYNCED</span>
+          {/* Date picker */}
+          <input type="date" value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            style={{ fontSize: 12, padding: "6px 10px",
+              borderRadius: 7, border: "1px solid " + P.border,
+              background: P.s1, color: P.text, fontFamily: "inherit" }} />
+          {/* Export button */}
+          <button style={{
+            padding: "7px 14px", background: P.blue, color: "#fff",
+            border: "none", borderRadius: 7, fontSize: 11, fontWeight: 700,
+            cursor: "pointer", fontFamily: "inherit",
+          }}>
+            📅 Export to Cal
+          </button>
+        </div>
       </div>
+
+      {/* ── 3 Stat Cards ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)",
+        gap: 12, marginBottom: 20 }}>
+        <StatBox label="Appearances Today"
+          value={String(totalCases)}
+          color={P.accent} sub="cases listed" />
+        <StatBox label="Earliest Hearing"
+          value={earliestTime || "—"}
+          color={P.teal} sub={cases[0]?.court || ""} />
+        <StatBox label="Courts to Visit"
+          value={String(uniqueCourts)}
+          color={P.blue} sub="across Bengaluru" />
+        <div style={{
+          background: P.accent, borderRadius: 10,
+          padding: "16px 18px", color: "#fff",
+        }}>
+          <div style={{ fontSize: 9, fontWeight: 700,
+            letterSpacing: "0.1em", textTransform: "uppercase",
+            marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>
+            Next Sync
+          </div>
+          <div style={{ fontFamily: "'Lora', Georgia, serif",
+            fontSize: 20, fontWeight: 700, lineHeight: 1.2 }}>
+            {new Date(new Date(selectedDate).getTime() + 86400000)
+              .toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+            {" · 6:00 AM"}
+          </div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 4 }}>
+            Auto-refreshed daily
+          </div>
+        </div>
+      </div>
+
+      {/* ── Court filter tabs ── */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 14,
+        alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, color: P.dim, marginRight: 4 }}>
+          Court:
+        </span>
+        {["all", ...courts].map(c => (
+          <button key={c} onClick={() => setFilter(c)} style={{
+            padding: "4px 12px", borderRadius: 20,
+            fontSize: 11, fontWeight: 700, cursor: "pointer",
+            background: filter === c ? P.accent : P.s1,
+            color: filter === c ? "#fff" : P.muted,
+            border: "1px solid " + (filter === c ? P.accent : P.border),
+            fontFamily: "inherit",
+          }}>
+            {c === "all" ? "All Courts" : c}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Table header ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1.4fr 1fr 1.4fr 1fr 1fr 0.7fr",
+        gap: 8, padding: "10px 16px",
+        background: P.accent, borderRadius: "8px 8px 0 0",
+        marginBottom: 0,
+      }}>
+        {["CASE", "CLIENT", "COURT & HALL", "JUDGE", "PURPOSE", "ITEM #"].map(h => (
+          <div key={h} style={{
+            fontSize: 9.5, fontWeight: 700, color: "#fff",
+            letterSpacing: "0.08em",
+          }}>{h}</div>
+        ))}
+      </div>
+
+      {/* ── Table rows ── */}
+      {loading && (
+        <div style={{ padding: 32, textAlign: "center",
+          color: P.dim, background: P.s1, fontSize: 13 }}>
+          Loading cause list...
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <div style={{ padding: 32, textAlign: "center",
+          color: P.dim, background: P.s1,
+          border: "1px solid " + P.border,
+          borderTop: "none", borderRadius: "0 0 8px 8px",
+          fontSize: 13 }}>
+          No cases listed for {displayDate}.
+        </div>
+      )}
+
+      <div style={{ border: "1px solid " + P.border,
+        borderTop: "none", borderRadius: "0 0 8px 8px",
+        overflow: "hidden" }}>
+        {filtered.map((c, i) => (
+          <div key={c.id || i} style={{
+            display: "grid",
+            gridTemplateColumns: "1.4fr 1fr 1.4fr 1fr 1fr 0.7fr",
+            gap: 8, padding: "12px 16px",
+            background: i % 2 === 0 ? P.s1 : P.s2,
+            borderBottom: "1px solid " + P.border,
+            alignItems: "center",
+            cursor: "pointer",
+            transition: "background 0.1s",
+          }}
+          onClick={() => nav("case-detail", c.caseObj)}
+          onMouseEnter={e => e.currentTarget.style.background = P.accentL}
+          onMouseLeave={e => e.currentTarget.style.background =
+            i % 2 === 0 ? P.s1 : P.s2}
+          >
+            {/* Case number + type */}
+            <div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: P.ink }}>
+                {c.suit}
+              </div>
+              <div style={{ fontSize: 10.5, color: P.muted, marginTop: 2 }}>
+                {c.case_type}
+              </div>
+            </div>
+            {/* Client */}
+            <div style={{ fontSize: 12, color: P.text }}>{c.client_name}</div>
+            {/* Court + Hall + Time */}
+            <div>
+              <div style={{ fontSize: 12, color: P.text }}>{c.court}</div>
+              <div style={{ fontSize: 10.5, color: P.dim, marginTop: 2 }}>
+                {c.hall && `Hall ${c.hall} · `}{c.time}
+              </div>
+            </div>
+            {/* Judge */}
+            <div style={{ fontSize: 11.5, color: P.muted }}>{c.judge}</div>
+            {/* Purpose */}
+            <div style={{ fontSize: 11.5, color: P.text }}>{c.purpose}</div>
+            {/* Item number badge */}
+            <div>
+              {c.item_number && (
+                <span style={{
+                  fontSize: 11, fontWeight: 700,
+                  padding: "3px 10px", borderRadius: 5,
+                  background: P.accentL, color: P.accent,
+                  border: "1px solid " + P.accent + "30",
+                }}>
+                  Item {c.item_number}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── AI Insight for the Day ── */}
+      {cases.length > 0 && (
+        <div style={{
+          marginTop: 20, padding: "16px 20px",
+          background: P.blueL,
+          border: "1px solid rgba(30,77,140,0.2)",
+          borderRadius: 10,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: P.blue,
+            marginBottom: 8 }}>
+            🧠 AI Insight for the Day
+          </div>
+          <div style={{ fontSize: 12.5, color: P.text, lineHeight: 1.8 }}>
+            You have {totalCases} appearances across {uniqueCourts} courts.
+            {earliestTime && ` Start at ${earliestTime}.`}
+            {" Plan your court order by location to avoid delays."}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+
  
 // ── DOCUMENTS SCREEN ──
  
@@ -1812,6 +3110,9 @@ const BREADCRUMB: Record<string,string> = {
   documents:     "Document Vault",
   "ai-drafts":   "AI Drafts",
   tools:         "Practice Tools",
+  "daily-cause-list":  "Calendar › Daily Cause List",   // ← ADD
+  "calendar-hearings": "Calendar › Hearings",           // ← ADD
+
 };
 // ── MAIN APP — default export ──
  
@@ -1830,6 +3131,18 @@ export default function App() {
       if (!error && data) setEntries(data as IntakeBrief[]);
     })();
   }, []);
+
+  useEffect(() => {
+    function handleBriefAction(e: MessageEvent) {
+      if (e.data?.action === 'open_drafts')       nav('ai-drafts');
+      if (e.data?.action === 'draft_notice')      nav('ai-drafts');
+      if (e.data?.action === 'draft_application') nav('ai-drafts');
+      if (e.data?.action === 'draft_execution')   nav('ai-drafts');
+    }
+    window.addEventListener('message', handleBriefAction);
+    return () => window.removeEventListener('message', handleBriefAction);
+  }, []);
+
  
   function nav(sc: string, data?: any) {
     setScreen(sc);
@@ -1858,10 +3171,16 @@ export default function App() {
       case "ai-drafts":     return <AIDrafts />;
       case "tools":         return <Tools />;
       default:              return <Overview nav={nav} entries={entries} />;
+      case "daily-cause-list": return <DailyCauseList nav={nav} />;
+      case "calendar-hearings": return <CalendarView />;  
+
     }
   }
  
-  const activeBase = screen.split("-")[0];
+  const activeBase = screen === "daily-cause-list" || screen === "calendar-hearings"
+  ? "calendar"
+  : screen.split("-")[0];
+
  
   return (
     <div style={{ display: "flex", height: "100vh",
@@ -1892,56 +3211,83 @@ export default function App() {
         </div>
  
         <nav style={{ padding: "8px 0", flex: 1 }}>
-          {NAV_ITEMS.map(item => {
-            const isActive = activeBase === item.key || screen === item.key;
-            return (
-              <div key={item.key} onClick={() => nav(item.key)}
+  {NAV_ITEMS.map(item => {
+    const isActive = activeBase === item.key || screen === item.key;
+    const isCalendar = item.key === "calendar";
+    const calendarOpen = screen === "calendar" || screen === "daily-cause-list"
+                       || screen === "calendar-hearings";
+    return (
+      <div key={item.key}>
+        {/* Main nav item */}
+        <div onClick={() => nav(item.key)}
+          style={{
+            display: "flex", alignItems: "center",
+            justifyContent: "space-between",
+            padding: "9px 16px", cursor: "pointer",
+            background: isActive ? P.accentL : "transparent",
+            borderLeft: isActive
+              ? "2px solid " + P.accent : "2px solid transparent",
+            transition: "all 0.13s",
+          }}
+          onMouseEnter={e => {
+            if (!isActive) e.currentTarget.style.background = P.s2;
+          }}
+          onMouseLeave={e => {
+            if (!isActive) e.currentTarget.style.background = "transparent";
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <span style={{ fontSize: 13, width: 16, textAlign: "center" }}>
+              {item.icon}
+            </span>
+            <span style={{ fontSize: 12.5,
+              fontWeight: isActive ? 600 : 400,
+              color: isActive ? P.accent : P.muted }}>
+              {item.label}
+              {isCalendar && (
+                <span style={{ marginLeft: 4, fontSize: 10, color: P.dim }}>
+                  {calendarOpen ? "▾" : "▸"}
+                </span>
+              )}
+            </span>
+          </div>
+          {/* badges ... keep existing badge logic here */}
+        </div>
+
+        {/* Calendar sub-items — only show when calendar is active */}
+        {isCalendar && calendarOpen && (
+          <div style={{ paddingLeft: 32 }}>
+            {[
+              { key: "calendar",           label: "Monthly View",     dot: true },
+              { key: "calendar-hearings",  label: "Hearings",         dot: false },
+              { key: "daily-cause-list",   label: "Daily Cause List", dot: false },
+            ].map(sub => (
+              <div key={sub.key}
+                onClick={() => nav(sub.key)}
                 style={{
-                  display: "flex", alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "9px 16px", cursor: "pointer",
-                  background: isActive ? P.accentL : "transparent",
-                  borderLeft: isActive
-                    ? "2px solid " + P.accent : "2px solid transparent",
-                  transition: "all 0.13s",
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) e.currentTarget.style.background = P.s2;
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) e.currentTarget.style.background = "transparent";
+                  padding: "6px 12px", cursor: "pointer",
+                  fontSize: 12, color: screen === sub.key ? P.accent : P.muted,
+                  fontWeight: screen === sub.key ? 600 : 400,
+                  display: "flex", alignItems: "center", gap: 6,
+                  borderRadius: 5,
+                  background: screen === sub.key ? P.accentL : "transparent",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                  <span style={{ fontSize: 13, width: 16, textAlign: "center" }}>
-                    {item.icon}
-                  </span>
-                  <span style={{ fontSize: 12.5,
-                    fontWeight: isActive ? 600 : 400,
-                    color: isActive ? P.accent : P.muted }}>
-                    {item.label}
-                  </span>
-                </div>
-                {item.key === "enquiries"
-                    ? entries.filter(e => !e.status || e.status === "new").length > 0 && (
-                        <span style={{ fontSize: 9, fontWeight: 700,
-                          background: P.rose, color: "#fff",
-                          borderRadius: 10, padding: "1px 6px" }}>
-                          {entries.filter(e => !e.status || e.status === "new").length}
-                        </span>
-                      )
-                    : item.badge && (
-                        <span style={{ fontSize: 9, fontWeight: 700,
-                          background: P.rose, color: "#fff",
-                          borderRadius: 10, padding: "1px 6px" }}>
-                          {item.badge}
-                        </span>
-                      )
-                  }
+                <span style={{
+                  width: 6, height: 6, borderRadius: "50%",
+                  background: screen === sub.key ? P.accent : P.border,
+                  display: "inline-block", flexShrink: 0,
+                }} />
+                {sub.label}
               </div>
-            );
-          })}
-        </nav>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  })}
+</nav>
+
  
         <div style={{ padding: "14px 18px",
           borderTop: "1px solid " + P.border }}>

@@ -140,9 +140,36 @@ if (action.includes("check")) {
 
   return new Response("", { status: 200 });
 }
+// ── Phone number collected during intake flow ──
+if (userState.get(from) === 'awaiting_phone') {
+  const cleaned = body.replace(/\D/g, '');
+  
+  if (cleaned.length !== 10) {
+    await twilioClient.messages.create({
+      from: process.env.TWILIO_WHATSAPP_FROM!,
+      to: from,
+      body: '❌ Please enter a valid 10-digit phone number.',
+    });
+    return new Response('', { status: 200 });
+  }
 
+  // Store the phone number
+  userPhoneInput.set(from, cleaned);
+  
+  // Now move to AI intake
+  userState.set(from, 'ai_intake');
+  const category = userPhoneInput.get(from + '_category') || '';
+
+  await twilioClient.messages.create({
+    from: process.env.TWILIO_WHATSAPP_FROM!,
+    to: from,
+    body: `✅ Got it! Now please describe your ${category} issue in detail and our AI will prepare a brief for the advocate.`,
+  });
+
+  return new Response('', { status: 200 });
+}
 // When user sends phone number
-if (/^\d{10}$/.test(body)) {
+if (/^\d{10}$/.test(body) && userState.get(from) !== 'awaiting_phone') {
   userPhoneInput.set(from, body);
  const cleanPhone = body.replace(/\D/g, "");
  
@@ -221,9 +248,12 @@ if (userState.get(from) === 'choose_category') {
     });
     return new Response('', { status: 200 });
   }
-
-  userState.set(from, 'ai_intake');
+ 
+  userState.set(from, 'awaiting_phone');  // ← changed from 'ai_intake'
   conversations.set(from, []);
+
+  // Store the selected category to use after phone is collected
+  userPhoneInput.set(from + '_category', category);
 
   await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM!,
