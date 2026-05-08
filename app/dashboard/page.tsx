@@ -115,6 +115,18 @@ const CASES = [
     court:"City Civil Court", judge:"A.V. Nataraj, J.", suit:"OS 1950/2015",
     status:"active", value:"Rs.42L", docs:14,
     last:"Written statement filed Apr 2. Rejoinder due Apr 20.",
+     party_designation:    "Plaintiff",           // Plaintiff/Petitioner/Defendant
+    opposite_party:       "Narayan S.A.",
+    opposite_designation: "Defendant",           // Defendant/Respondent/Accused
+    client_address:       "No. 12, 3rd Cross, Basavanagudi, Bengaluru - 560004",
+    client_id_type:       "Aadhaar",
+    advocate:             "M.A. Fayaz Ahammed",
+    advocate_roll:        "KAR/1234/2015",
+    advocate_address:     "No. 45, Court Road, Bengaluru - 560001. Ph: 98451XXXXX",
+    filing_date:          "2026-02-10",
+    opposite_party2:      "",                    // second defendant if any
+    advocate2:            "",                    // junior advocate if any
+    advocate2_roll:       "",
     tl:[{d:"Apr 12, 2026",e:"Written statement received from defendant"},
         {d:"Mar 28, 2026",e:"Summons served to defendant"},
         {d:"Feb 10, 2026",e:"Plaint filed — admitted by City Civil Court"}] },
@@ -123,6 +135,18 @@ const CASES = [
     court:"Family Court", judge:"Sunita Rao, J.", suit:"HMP 78/2024",
     status:"active", value:"Rs.1.1Cr", docs:9,
     last:"Mediation notice issued Mar 28. Session 2 scheduled.",
+     party_designation:    "Plaintiff",           // Plaintiff/Petitioner/Defendant
+    opposite_party:       "Narayan S.A.",
+    opposite_designation: "Defendant",           // Defendant/Respondent/Accused
+    client_address:       "No. 12, 3rd Cross, Basavanagudi, Bengaluru - 560004",
+    client_id_type:       "Aadhaar",
+    advocate:             "M.A. Fayaz Ahammed",
+    advocate_roll:        "KAR/1234/2015",
+    advocate_address:     "No. 45, Court Road, Bengaluru - 560001. Ph: 98451XXXXX",
+    filing_date:          "2026-02-10",
+    opposite_party2:      "",                    // second defendant if any
+    advocate2:            "",                    // junior advocate if any
+    advocate2_roll:       "",
     tl:[{d:"Mar 28, 2026",e:"Mediation session 1 — partial progress"},
         {d:"Jan 22, 2026",e:"OS filed — partition suit admitted"}] },
   { id:"CS-2025-012", client:"Mohan Rao", type:"CHEQUE_BOUNCE",cnr: "KABC010051322017", tc:"#a63232",
@@ -130,6 +154,18 @@ const CASES = [
     court:"JMFC Court 14", judge:"Ravi Kumar, MM.", suit:"CC 234/2025",
     status:"active", value:"Rs.8.5L", docs:6,
     last:"Cross-examination completed Apr 10. Written arguments due May 6.",
+     party_designation:    "Plaintiff",           // Plaintiff/Petitioner/Defendant
+    opposite_party:       "Narayan S.A.",
+    opposite_designation: "Defendant",           // Defendant/Respondent/Accused
+    client_address:       "No. 12, 3rd Cross, Basavanagudi, Bengaluru - 560004",
+    client_id_type:       "Aadhaar",
+    advocate:             "M.A. Fayaz Ahammed",
+    advocate_roll:        "KAR/1234/2015",
+    advocate_address:     "No. 45, Court Road, Bengaluru - 560001. Ph: 98451XXXXX",
+    filing_date:          "2026-02-10",
+    opposite_party2:      "",                    // second defendant if any
+    advocate2:            "",                    // junior advocate if any
+    advocate2_roll:       "",
     tl:[{d:"Apr 10, 2026",e:"Cross-examination of complainant completed"},
         {d:"Jan 8, 2025",e:"Complaint filed under NI Act S.138"}] },
   { id:"CS-2023-145", client:"Sujatha K.", type:"CIVIL_INJUNCTION",cnr: "KABC010051322018", tc:"#8b6914",
@@ -137,6 +173,18 @@ const CASES = [
     court:"City Civil Court", judge:"B.M. Patil, J.", suit:"OS 445/2023",
     status:"won", value:"Rs.28L", docs:22,
     last:"Decree passed Apr 3. Permanent injunction granted.",
+     party_designation:    "Plaintiff",           // Plaintiff/Petitioner/Defendant
+    opposite_party:       "Narayan S.A.",
+    opposite_designation: "Defendant",           // Defendant/Respondent/Accused
+    client_address:       "No. 12, 3rd Cross, Basavanagudi, Bengaluru - 560004",
+    client_id_type:       "Aadhaar",
+    advocate:             "M.A. Fayaz Ahammed",
+    advocate_roll:        "KAR/1234/2015",
+    advocate_address:     "No. 45, Court Road, Bengaluru - 560001. Ph: 98451XXXXX",
+    filing_date:          "2026-02-10",
+    opposite_party2:      "",                    // second defendant if any
+    advocate2:            "",                    // junior advocate if any
+    advocate2_roll:       "",
     tl:[{d:"Apr 3, 2026",e:"Decree passed — permanent injunction granted"},
         {d:"Nov 5, 2023",e:"Suit filed — interim injunction granted ex-parte"}] },
   { id:"CS-2025-031", client:"Ibrahim Khan", type:"RENT_TENANCY", cnr: "KABC010051322019",tc:"#1a6470",
@@ -144,6 +192,18 @@ const CASES = [
     court:"Small Causes Court", judge:"TBD", suit:"RCP 12/2025",
     status:"active", value:"Rs.1.4L", docs:3,
     last:"Plaint filed Apr 12. First date Apr 25.",
+     party_designation:    "Plaintiff",           // Plaintiff/Petitioner/Defendant
+    opposite_party:       "Narayan S.A.",
+    opposite_designation: "Defendant",           // Defendant/Respondent/Accused
+    client_address:       "No. 12, 3rd Cross, Basavanagudi, Bengaluru - 560004",
+    client_id_type:       "Aadhaar",
+    advocate:             "M.A. Fayaz Ahammed",
+    advocate_roll:        "KAR/1234/2015",
+    advocate_address:     "No. 45, Court Road, Bengaluru - 560001. Ph: 98451XXXXX",
+    filing_date:          "2026-02-10",
+    opposite_party2:      "",                    // second defendant if any
+    advocate2:            "",                    // junior advocate if any
+    advocate2_roll:       "",
     tl:[{d:"Apr 12, 2026",e:"Plaint filed — admitted. First date issued."}] },
 ];
  
@@ -1135,6 +1195,11 @@ const [courtLoading, setCourtLoading] = useState(false);
 const [courtError, setCourtError]   = useState<string | null>(null);
 const [lastSource, setLastSource]   = useState<string | null>(null);
 const [showAllOrders, setShowAllOrders] = useState(false);
+const [selectedDraft, setSelectedDraft] = useState<string | null>(null);
+const [draftGenerating, setDraftGenerating] = useState(false);
+const [generatedDraft, setGeneratedDraft] = useState<string | null>(null);
+const [editMode, setEditMode] = useState<string | null>(null); // which card is editing
+const [editData, setEditData] = useState<any>({ ...item });    // local copy of case data
 
  async function fetchCourtStatus() {
   if (!item?.cnr) {
@@ -1154,6 +1219,31 @@ const [showAllOrders, setShowAllOrders] = useState(false);
     setCourtError(err.message);
   } finally {
     setCourtLoading(false);
+  }
+}
+async function generateDraft() {
+  setDraftGenerating(true);
+  setGeneratedDraft(null);
+
+  try {
+    const endpoint = selectedDraft === 'Vakalatnama'
+      ? '/api/vakalatnama'
+      : '/api/order-brief'; // fallback for now
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseData: editData }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error);
+    setGeneratedDraft(json.draft);
+
+  } catch (err: any) {
+    setGeneratedDraft(`Error generating draft: ${err.message}`);
+  } finally {
+    setDraftGenerating(false);
   }
 }
 async function fetchAiBrief(pdfUrl: string, purpose: string) {
@@ -1426,6 +1516,64 @@ function openDailyStatus(h: any) {
   win.location.href = URL.createObjectURL(blob);
 }
 
+function EditableCard({ cardKey, title, fields, editMode, editData, setEditMode, setEditData }: {
+  cardKey: string;
+  title: string;
+  fields: { label: string; field: string; }[];
+  editMode: string | null;
+  editData: any;
+  setEditMode: (k: string | null) => void;
+  setEditData: (d: any) => void;
+}) {
+  const isEditing = editMode === cardKey;
+
+  return (
+    <Card>
+      <div style={{ display: "flex", justifyContent: "space-between",
+        alignItems: "center", marginBottom: 10 }}>
+        <SecLabel>{title}</SecLabel>
+        <button
+  onClick={() => setEditMode(isEditing ? null : cardKey)}
+  style={{
+    fontSize: 10.5, fontWeight: 700,
+    padding: "4px 12px", borderRadius: 20,
+    background: isEditing ? P.accent : P.blueL,
+    color: isEditing ? "#fff" : P.blue,
+    border: "1px solid " + (isEditing ? P.accent : "rgba(30,77,140,0.25)"),
+    cursor: "pointer", fontFamily: "inherit",
+    letterSpacing: "0.02em",
+  }}
+>
+  {isEditing ? "✓ Done" : "✏ Edit"}
+</button>
+      </div>
+
+      {fields.map(({ label, field }) => (
+        isEditing ? (
+          <div key={field} style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 9.5, color: P.dim, marginBottom: 3,
+              textTransform: "uppercase", letterSpacing: "0.07em" }}>
+              {label}
+            </div>
+            <input
+              value={editData[field] ?? ""}
+              onChange={e => setEditData((prev: any) => ({ ...prev, [field]: e.target.value }))}
+              style={{
+                width: "100%", fontSize: 12, padding: "7px 10px",
+                borderRadius: 6, border: "1px solid " + P.accent,
+                background: P.s2, color: P.text, outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+          </div>
+        ) : (
+          <Row key={field} label={label} value={editData[field] || "—"} />
+        )
+      ))}
+    </Card>
+  );
+}
+
   return (
     <div>
       <BackLink onClick={() => nav("cases")}>← Back to Cases</BackLink>
@@ -1504,20 +1652,76 @@ function openDailyStatus(h: any) {
     }}>NEW</span>
   </button>
 
+  {/* AI Drafts tab */}
+<button
+  onClick={() => setTab('ai-drafts')}
+  style={{
+    padding: '8px 18px', background: 'none', border: 'none',
+    borderBottom: tab === 'ai-drafts' ? '2px solid ' + P.blue : '2px solid transparent',
+    color: tab === 'ai-drafts' ? P.blue : P.muted,
+    fontSize: 12, fontWeight: tab === 'ai-drafts' ? 700 : 400,
+    cursor: 'pointer', fontFamily: 'inherit',
+  }}
+>
+  ✨ AI Drafts
+</button>
+
 </div>
 
       {tab === "overview" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <Card>
-              <SecLabel>Case Details</SecLabel>
-              <Row label="Court" value={item.court} />
-              <Row label="CNR Number" value={item.cnr} />
-              <Row label="Judge" value={item.judge} />
-              <Row label="Suit Value" value={item.value} />
-              <Row label="Stage" value={item.stage} valueColor={item.sc} />
-              {item.next && <Row label="Next Hearing" value={item.next} valueColor={P.teal} />}
-            </Card>
+            <EditableCard
+                cardKey="case-details"
+                title="Case Details"
+                fields={[
+                  { label: "Court",         field: "court" },
+                  { label: "CNR Number",    field: "cnr" },
+                  { label: "Judge",         field: "judge" },
+                  { label: "Suit Value",    field: "value" },
+                  { label: "Stage",         field: "stage" },
+                  { label: "Next Hearing",  field: "next" },
+                  { label: "Filing Date",   field: "filing_date" },
+                ]}
+                editMode={editMode}
+                editData={editData}
+                setEditMode={setEditMode}
+                setEditData={setEditData}
+              />
+
+              <EditableCard
+                cardKey="parties"
+                title="Parties & Representation"
+                fields={[
+                  { label: "Party Role",         field: "party_designation" },
+                  { label: "Opposite Party",     field: "opposite_party" },
+                  { label: "Opposite Role",      field: "opposite_designation" },
+                  { label: "Advocate",           field: "advocate" },
+                  { label: "Roll No.",           field: "advocate_roll" },
+                  { label: "Jr. Advocate",       field: "advocate2" },
+                  { label: "Jr. Roll No.",       field: "advocate2_roll" },
+                ]}
+                editMode={editMode}
+                editData={editData}
+                setEditMode={setEditMode}
+                setEditData={setEditData}
+              />
+
+              <EditableCard
+                cardKey="client"
+                title="Client & Service Details"
+                fields={[
+                  { label: "Client Address",      field: "client_address" },
+                  { label: "Phone",               field: "phone" },
+                  { label: "ID Proof Type",       field: "client_id_type" },
+                  { label: "Address for Service", field: "advocate_address" },
+                ]}
+                editMode={editMode}
+                editData={editData}
+                setEditMode={setEditMode}
+                setEditData={setEditData}
+              />
+
             <Card>
               <SecLabel>Last Activity</SecLabel>
               <p style={{ margin: 0, fontSize: 13, color: P.text, lineHeight: 1.7 }}>
@@ -1819,23 +2023,23 @@ function openDailyStatus(h: any) {
 )}
 
       {tab === 'ecourts' && (
-  <div>
+        <div>
 
-    {/* ── SYNC HEADER BAR ── */}
-    <div style={{
-      background: P.accent, borderRadius: '10px 10px 0 0',
-      padding: '10px 16px', display: 'flex',
-      justifyContent: 'space-between', alignItems: 'center',
-    }}>
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
-          ⚡ eCourts Live Feed
-        </div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
-          CNR: {item.cnr}
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* ── SYNC HEADER BAR ── */}
+        <div style={{
+          background: P.accent, borderRadius: '10px 10px 0 0',
+          padding: '10px 16px', display: 'flex',
+          justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
+              ⚡ eCourts Live Feed
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
+              CNR: {item.cnr}
+            </div>
+          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {courtData && !courtLoading && (
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>
             {lastSource === 'live' ? '● LIVE' : '○ CACHED'}
@@ -1854,45 +2058,45 @@ function openDailyStatus(h: any) {
         >
           {courtLoading ? 'Fetching...' : '↻ Refresh'}
         </button>
-      </div>
-    </div>
-
-    {/* ── PANEL BODY ── */}
-    <div style={{
-      border: '1px solid ' + P.border, borderTop: 'none',
-      borderRadius: '0 0 10px 10px', overflow: 'hidden',
-    }}>
-
-      {/* Loading state */}
-      {courtLoading && !courtData && (
-        <div style={{ padding: 40, textAlign: 'center', color: P.dim, fontSize: 13 }}>
-          Fetching live data from eCourts...
         </div>
-      )}
-
-      {/* Error / warning */}
-      {courtError && (
-        <div style={{
-          padding: '10px 16px', fontSize: 12,
-          background: 'rgba(139,105,20,0.08)',
-          color: P.gold, borderBottom: '1px solid ' + P.border,
-        }}>
-          ⚠ {courtError}
         </div>
-      )}
 
-      {/* Main data panel */}
-      {courtData && (
+        {/* ── PANEL BODY ── */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr',
-          gap: 0,
+          border: '1px solid ' + P.border, borderTop: 'none',
+          borderRadius: '0 0 10px 10px', overflow: 'hidden',
         }}>
 
-          {/* LEFT: Status + AI Summary */}
-          <div style={{
-            padding: 16, borderRight: '1px solid ' + P.border,
-            display: 'flex', flexDirection: 'column', gap: 14,
-          }}>
+          {/* Loading state */}
+          {courtLoading && !courtData && (
+            <div style={{ padding: 40, textAlign: 'center', color: P.dim, fontSize: 13 }}>
+              Fetching live data from eCourts...
+            </div>
+          )}
+
+          {/* Error / warning */}
+          {courtError && (
+            <div style={{
+              padding: '10px 16px', fontSize: 12,
+              background: 'rgba(139,105,20,0.08)',
+              color: P.gold, borderBottom: '1px solid ' + P.border,
+            }}>
+              ⚠ {courtError}
+            </div>
+          )}
+
+              {/* Main data panel */}
+              {courtData && (
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 1fr',
+                  gap: 0,
+                }}>
+
+                  {/* LEFT: Status + AI Summary */}
+                  <div style={{
+                    padding: 16, borderRight: '1px solid ' + P.border,
+                    display: 'flex', flexDirection: 'column', gap: 14,
+                  }}>
 
             {/* Current Status */}
             <div>
@@ -2091,6 +2295,202 @@ function openDailyStatus(h: any) {
         </div>
       )}
     </div>
+  </div>
+)}
+{tab === 'ai-drafts' && (
+  <div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)",
+      gap: 10, marginBottom: 20 }}>
+      {[
+        {name:"Legal Notice",    icon:"⚖️", desc:"NI Act / Contract / Property notice",  color:P.accent},
+        {name:"Vakalatnama",     icon:"📜", desc:"Power of attorney for court",           color:P.teal},
+        {name:"Plaint Draft",   icon:"📋", desc:"Civil suit plaint with cause of action", color:P.blue},
+        {name:"Reply to Notice", icon:"✉️", desc:"Structured reply to legal notice",      color:P.gold},
+        {name:"Affidavit",      icon:"📝", desc:"Sworn affidavit for court proceedings",  color:P.rose},
+        {name:"Execution Petition", icon:"🏛", desc:"Execution of decree",               color:P.accent},
+      ].map((t, i) => (
+        <div key={i}
+          onClick={() => setSelectedDraft(t.name)}
+          style={{
+            background: selectedDraft === t.name ? P.s2 : P.s1,
+            border: selectedDraft === t.name
+              ? "1.5px solid " + t.color : "1px solid " + P.border,
+            borderRadius: 10, padding: 16, cursor: "pointer",
+            transition: "all 0.12s",
+          }}>
+          <div style={{ fontSize: 20, marginBottom: 8 }}>{t.icon}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>{t.name}</div>
+          <div style={{ fontSize: 11, color: P.muted, marginTop: 3 }}>{t.desc}</div>
+        </div>
+      ))}
+    </div>
+
+    {selectedDraft && (
+      <Card style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, color: P.blue }}>
+          Generate: {selectedDraft}
+        </div>
+        {/* Pre-filled with case details */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr",
+          gap: 10, marginBottom: 12 }}>
+          {[
+              { label: "Client Full Name",     val: item.client },
+              { label: "Party Designation",    val: item.party_designation   || "Plaintiff" },
+              { label: "Opposite Party",       val: item.opposite_party      || "" },
+              { label: "Opposite Designation", val: item.opposite_designation || "Defendant" },
+              { label: "Case / Reference",     val: item.suit },
+              { label: "Court",                val: item.court },
+              { label: "Advocate Name",        val: item.advocate            || "" },
+              { label: "Advocate Roll No.",    val: item.advocate_roll       || "" },
+              { label: "Address for Service",  val: item.advocate_address    || "" },
+              { label: "Client Address",       val: item.client_address      || "" },
+              ].map(f => (
+              <div key={f.label}>
+                <div style={{ fontSize: 10, color: P.dim, marginBottom: 4,
+                  textTransform: "uppercase", letterSpacing: "0.07em" }}>{f.label}</div>
+                <input defaultValue={f.val}
+                  style={{ width: "100%", fontSize: 12, padding: "8px 11px",
+                    borderRadius: 7, border: "1px solid " + P.border,
+                    background: P.s2, color: P.text, outline: "none",
+                    fontFamily: "inherit" }} />
+              </div>
+            ))}
+        </div>
+        <button onClick={generateDraft} disabled={draftGenerating} style={{
+          padding: "8px 20px",
+          background: draftGenerating ? P.border : P.blue,
+          color: draftGenerating ? P.muted : "#fff",
+          border: "none", borderRadius: 7, fontSize: 12, fontWeight: 700,
+          cursor: draftGenerating ? "not-allowed" : "pointer", fontFamily: "inherit",
+        }}>
+          {draftGenerating ? "Generating…" : "✨ Generate Draft"}
+        </button>
+      </Card>
+    )}
+
+    
+       {generatedDraft && (
+  <Card>
+    <div style={{ display: "flex", justifyContent: "space-between",
+      marginBottom: 10, alignItems: "center" }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: P.accent }}>
+        ✓ {selectedDraft} Generated — Review & Edit before use
+      </span>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={() => {
+            const win = window.open('', '_blank');
+            if (!win) return;
+            const blob = new Blob([`<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>${selectedDraft} — ${editData.suit}</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { 
+    font-family: 'Source Sans 3', system-ui, sans-serif; 
+    max-width: 720px;
+    margin: 40px auto; 
+    padding: 0 32px 60px; 
+    color: #2c2417; 
+    background: #f5f2ed; 
+  }
+  h2 { 
+    font-family: 'Lora', Georgia, serif; 
+    color: #2d6a4f; 
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+  .draft-body {
+    font-family: 'Source Sans 3', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 2;
+    background: #fff;
+    padding: 40px 48px;
+    border-radius: 8px;
+    border: 1px solid #e2ddd4;
+    color: #1a1208;
+    white-space: pre-wrap;
+  }
+  .disclaimer { 
+    margin-top: 20px; padding: 12px 16px; 
+    background: #fef9ec;
+    border: 1px solid rgba(139,105,20,0.25); 
+    border-radius: 8px;
+    font-size: 12px; color: #8b6914; 
+  }
+  .actions { margin-top: 16px; display: flex; gap: 10px; }
+  button { 
+    padding: 8px 20px; border-radius: 6px; font-size: 13px;
+    cursor: pointer; font-family: inherit; font-weight: 600; border: none; 
+  }
+</style></head>
+<body>
+  <h2>${selectedDraft}</h2>
+  <div style="font-size:12px;color:#6b5e4a;margin-bottom:20px;">
+    ${editData.suit} · ${editData.court} · ${editData.client}
+  </div>
+  <div class="draft-body">${generatedDraft
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  }</div>
+  <div class="disclaimer">
+    ⚠ AI-generated draft. Always review with the advocate before filing.
+  </div>
+  <div class="actions">
+    <button style="background:#2d6a4f;color:#fff" onclick="window.print()">🖨 Print / Save PDF</button>
+    <button style="background:#f0ece4;color:#2c2417;border:1px solid #e2ddd4" onclick="window.close()">← Back</button>
+  </div>
+</body></html>`], { type: 'text/html;charset=utf-8' });
+            win.location.href = URL.createObjectURL(blob);
+          }}
+          style={{ fontSize: 11, padding: "5px 12px",
+            background: P.accent, color: "#fff", border: "none",
+            borderRadius: 5, cursor: "pointer", fontFamily: "inherit" }}>
+          🖨 Open Full Draft
+        </button>
+        <button
+          onClick={() => navigator.clipboard.writeText(generatedDraft)}
+          style={{ fontSize: 11, padding: "5px 12px",
+            background: P.s2, border: "1px solid " + P.border,
+            borderRadius: 5, cursor: "pointer", fontFamily: "inherit",
+            color: P.text }}>
+          📋 Copy
+        </button>
+      </div>
+    </div>
+
+    {/* ── EDITABLE DRAFT BODY ── */}
+    <textarea
+      value={generatedDraft}
+      onChange={e => setGeneratedDraft(e.target.value)}
+      style={{
+        width: "100%",
+        fontFamily: "'Source Sans 3', system-ui, sans-serif",
+        fontSize: 13,
+        lineHeight: 2,
+        background: "#fff",
+        padding: "20px 24px",
+        borderRadius: 8,
+        color: "#1a1208",
+        minHeight: 320,
+        border: "1px solid " + P.border,
+        outline: "none",
+        resize: "vertical",
+        boxSizing: "border-box" as const,
+      }}
+    />
+
+    <div style={{ padding: "10px 13px", borderRadius: 7, fontSize: 11,
+      marginTop: 10, background: P.goldL,
+      border: "1px solid rgba(139,105,20,0.2)", color: P.gold }}>
+      ✏ Edit directly above · ⚠ AI-generated — always review before filing.
+    </div>
+  </Card>
+)}
+        
+     
   </div>
 )}
 
