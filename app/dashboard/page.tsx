@@ -34,6 +34,20 @@ type NavItem = {
   badge?: number;
 };
 
+async function generateClientId(): Promise<string> {
+  const { data, error } = await supabase
+    .from("intake_briefs")
+    .select("client_id")
+    .not("client_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) return "CLT-001";
+
+  const last = data[0].client_id as string; // e.g. "CLT-047"
+  const num = parseInt(last.replace("CLT-", ""), 10);
+  return `CLT-${String(num + 1).padStart(3, "0")}`;
+}
 // ── COLOR PALETTE (matches the HTML dashboard exactly) ──
 const P = {
   bg:      "#f5f2ed",   // warm cream background
@@ -111,10 +125,10 @@ const INTAKES = [
  // ── MOCK CASE (temporary) ──
 const CASES = [
   { id:"CS-2024-089", client:"LEENA MADAN K", type:"PROPERTY_TITLE", tc:"#2d6a4f",
-    cnr: "KABC010051322015",stage:"Evidence", sc:"#1e4d8c", next:"Apr 22, 2026",
+    cnr: "KABC010051322015",stage:"Decree", sc:P.accent, next:"Apr 22, 2026",
     court:"City Civil Court", judge:"A.V. Nataraj, J.", suit:"OS 1950/2015",
-    status:"active", value:"Rs.42L", docs:14,
-    last:"Written statement filed Apr 2. Rejoinder due Apr 20.",
+    status:"won", value:"Rs.42L", docs:14,
+    last:"Case closed. Decree passed — City Civil Court.",
      party_designation:    "Plaintiff",           // Plaintiff/Petitioner/Defendant
     opposite_party:       "Narayan S.A.",
     opposite_designation: "Defendant",           // Defendant/Respondent/Accused
@@ -357,7 +371,9 @@ function Overview({ nav, entries }: {
 }) {
   return (
     <div>
-      <SectionTitle sub="Friday, 17 April 2026 — Aadya Law">
+      <SectionTitle sub={new Date().toLocaleDateString("en-IN", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric"
+      }) + " — Aadya Law"}>
         Today at a Glance
       </SectionTitle>
  
@@ -661,13 +677,20 @@ function AddClient() {
   }
  
   async function save() {
-    if (!form.client_name.trim()) {
-      showStatus("Client name is required.", false);
-      return;
-    }
-    setSaving(true);
-    try {
-      const { error } = await supabase.from("intake_briefs").insert([{
+  if (!form.client_name.trim()) {
+    showStatus("Client name is required.", false);
+    return;
+  }
+  setSaving(true);
+  try {
+    // 1. Generate client ID
+    const clientId = await generateClientId();
+
+    // 2. Insert the client record
+    const { data: inserted, error } = await supabase
+      .from("intake_briefs")
+      .insert([{
+        client_id:     clientId,
         client_name:   form.client_name.trim(),
         contact_phone: form.contact_phone.trim(),
         service_type:  form.service_type,
@@ -676,17 +699,63 @@ function AddClient() {
         status:        "new",
         source:        "manual",
         created_at:    new Date().toISOString(),
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 3. Upload each document to Supabase Storage
+    for (const file of docs) {
+      const ext      = file.name.split(".").pop();
+      const filePath = `${clientId}/${Date.now()}-${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        continue; // skip this file but don't stop
+      }
+
+      // 4. Get public URL
+      const { data: urlData } = supabase.storage
+        .from("documents")
+        .getPublicUrl(filePath);
+
+      // 5. Save document record to DB
+      // 5. Save document record to DB
+      console.log("DOCS TO UPLOAD:", docs.length, docs);
+      showStatus(`Saving... ${docs.length} file(s) to upload`, true);
+
+      await supabase.from("documents").insert([{
+        client_id:   clientId,
+        client_name: form.client_name.trim(),
+        doc_type:    "CHEQUE",        // ← hardcoded for this test
+        file_name:   file.name,
+        file_url:    urlData.publicUrl,
+        intake_id:   inserted.id,
+        verified:    false,
+        ai_parsed:   false,
+        created_at:  new Date().toISOString(),
       }]);
-      if (error) throw error;
-      showStatus("Client saved successfully!", true);
-      setForm({ client_name: "", contact_phone: "", service_type: "", recommended_forum: "",fact_summary: "" });
-    } catch (err) {
-      console.error(err);
-      showStatus("Error saving. Check console (F12).", false);
-    } finally {
-      setSaving(false);
     }
+
+    showStatus(`Client saved! ID: ${clientId}`, true);
+    setForm({
+      client_name: "", contact_phone: "",
+      service_type: "", recommended_forum: "", fact_summary: "",
+    });
+    setDocs([]);
+
+  } catch (err) {
+    console.error(err);
+    showStatus("Error saving. Check console (F12).", false);
+  } finally {
+    setSaving(false);
   }
+}
  
   const inputStyle: React.CSSProperties = {
     width: "100%", fontSize: 12, padding: "8px 11px",
@@ -1022,11 +1091,123 @@ function IntakeList({ nav }: { nav: (s: string, d?: any) => void }) {
 }
  
 // ── INTAKE DETAIL SCREEN ──
- 
-function IntakeDetail({ item, nav }: {
-  item: typeof INTAKES[0];
+ function IntakeDetail({ item, nav }: {
+  item: any;
   nav: (s: string, d?: any) => void;
 }) {
+  // Normalize fields — works for both mock INTAKES and real Supabase IntakeBrief
+  const clientName  = item.client_name  || item.name     || "—";
+  const clientPhone = item.contact_phone || item.phone    || "—";
+  const caseType    = item.service_type  || item.type     || "—";
+  const summary     = item.fact_summary  || item.summary  || "—";
+  const forum       = item.recommended_forum || item.court || "—";
+  const receivedAt  = item.created_at    || item.time     || "—";
+  const urgency     = item.urgency       || "medium";
+  const deadline    = item.deadline      || "—";
+  const daysLeft    = item.dl            ?? "—";
+  const limStatus   = item.lim           || "safe";
+  const laws        = item.laws          || [];
+  const questions   = item.questions     || [];
+  const uc          = item.uc            || P.gold;
+  const tc          = item.tc            || P.accent;
+
+  const [showCaseForm, setShowCaseForm] = useState(false);
+ const [caseForm, setCaseForm] = useState({
+  cnr: "",
+  suit: "",
+  court: forum,
+  judge: "",
+  stage: "Filing",
+  value: "",
+  filing_date: new Date().toISOString().split("T")[0],
+  next_hearing: "",
+  advocate: "",
+  advocate_roll: "",
+  opposite_party: "",
+  party_designation: "Plaintiff",
+  opposite_designation: "Defendant",
+  client_address: "",
+  advocate_address: "",
+});
+  const [converting, setConverting] = useState(false);
+
+  async function convertToCase() {
+  setConverting(true);
+  try {
+    const { data: last } = await supabase
+      .from("cases")
+      .select("case_id")
+      .not("case_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const lastNum = last?.[0]?.case_id
+      ? parseInt(last[0].case_id.split("-")[2] || "0")
+      : 0;
+    const year   = new Date().getFullYear();
+    const caseId = `CS-${year}-${String(lastNum + 1).padStart(3, "0")}`;
+
+    const typeMap: Record<string, string> = {
+      "Property — Title Dispute":      "PROPERTY_TITLE",
+      "Property — Partition":          "FAMILY_SUCCESSION",
+      "PROPERTY_ENCROACHMENT":         "PROPERTY_ENCROACHMENT",
+      "Family — Succession":           "FAMILY_SUCCESSION",
+      "Family — Divorce":              "FAMILY_SUCCESSION",
+      "Rent — Tenancy":                "RENT_TENANCY",
+      "Cheque Bounce — NI Act S.138":  "CHEQUE_BOUNCE",
+      "RERA — Builder Dispute":        "RERA_BUILDER",
+      "Civil — Recovery of Money":     "CIVIL_CONTRACT",
+      "Civil - Contract":              "CIVIL_CONTRACT",
+      "Civil - Injunction":            "CIVIL_INJUNCTION",
+      "Documentation — Legal Opinion": "CIVIL_CONTRACT",
+    };
+
+    const { error } = await supabase.from("cases").insert([{
+      case_id:              caseId,
+      client_name:               clientName,
+      case_type:                 typeMap[caseType] || caseType.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase(),
+      suit:                 caseForm.suit || "—",
+      suit_number:          caseForm.suit || "—",
+      cnr:                  caseForm.cnr  || "—",
+      cnr_number:           caseForm.cnr  || "—",
+      court_name:                caseForm.court,
+      judge:                caseForm.judge,
+      stage:                caseForm.stage,
+      status:               "active",
+      value:                caseForm.value,
+      filing_date:          caseForm.filing_date,
+      next_hearing:         caseForm.next_hearing || null,
+      last_activity:        `Case filed. ${summary?.slice(0, 80) || ""}`,
+      party_designation:    caseForm.party_designation,
+      opposite_party:       caseForm.opposite_party,
+      opposite_designation: caseForm.opposite_designation,
+      advocate:             caseForm.advocate,
+      advocate_roll:        caseForm.advocate_roll,
+      client_address:       caseForm.client_address,
+      advocate_address:     caseForm.advocate_address,
+      intake_id:            item.id && !item.id.toString().startsWith("INT-") ? item.id : null,
+      created_at:           new Date().toISOString(),
+    }]);
+
+    if (error) throw error;
+
+    if (item.id && !item.id.toString().startsWith("INT-")) {
+      await supabase
+        .from("intake_briefs")
+        .update({ status: "converted" })
+        .eq("id", item.id);
+    }
+
+    setShowCaseForm(false);
+    alert(`✓ Case ${caseId} created!`);
+    nav("cases");
+  } catch (err: any) {
+    alert("Error: " + err.message);
+  } finally {
+    setConverting(false);
+  }
+}
+
   return (
     <div>
       <BackLink onClick={() => nav("intake")}>← Back to Intake Briefs</BackLink>
@@ -1034,14 +1215,14 @@ function IntakeDetail({ item, nav }: {
         alignItems: "flex-start", marginBottom: 16 }}>
         <div>
           <h2 style={{ margin: 0, fontFamily: "'Lora', Georgia, serif",
-            fontSize: 23, fontWeight: 700, color: P.ink }}>{item.name}</h2>
+            fontSize: 23, fontWeight: 700, color: P.ink }}>{clientName}</h2>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 8 }}>
-            <Pill label={item.id} color={P.dim} />
-            <Pill label={item.type.replace(/_/g," ")} color={item.tc} />
-            <Pill label={"Urgency: " + item.urgency} color={item.uc} />
+            <Pill label={item.id || "—"} color={P.dim} />
+            <Pill label={caseType.replace(/_/g," ")} color={tc} />
+            <Pill label={"Urgency: " + urgency} color={uc} />
             <Pill
-              label={item.lim === "safe" ? "✓ Within Limitation" : "⚠ Deadline Warning"}
-              color={item.lim === "safe" ? P.accent : P.gold} />
+              label={limStatus === "safe" ? "✓ Within Limitation" : "⚠ Deadline Warning"}
+              color={limStatus === "safe" ? P.accent : P.gold} />
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -1050,63 +1231,73 @@ function IntakeDetail({ item, nav }: {
             border: "1px solid " + P.border, borderRadius: 7,
             fontSize: 12, cursor: "pointer", fontFamily: "inherit",
           }}>📅 Add to Calendar</button>
-          <button style={{
-            padding: "7px 16px", background: P.accent, color: "#fff",
-            border: "none", borderRadius: 7, fontSize: 12, fontWeight: 700,
-            cursor: "pointer", fontFamily: "inherit",
-          }}>Convert to Case →</button>
+          <button onClick={() => setShowCaseForm(true)} style={{
+          padding: "7px 16px",
+          background: P.accent, color: "#fff",
+          border: "none", borderRadius: 7, fontSize: 12, fontWeight: 700,
+          cursor: "pointer", fontFamily: "inherit",
+        }}>
+          Convert to Case →
+        </button>
         </div>
       </div>
- 
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr",
         gap: 14, marginBottom: 14 }}>
         <Card>
           <SecLabel>Client Details</SecLabel>
-          <Row label="Phone" value={item.phone} />
-          <Row label="Received" value={item.time} />
-          <Row label="Case Type" value={item.subtype} valueColor={item.tc} />
-          <Row label="Forum" value={item.court} />
+          <Row label="Phone"     value={clientPhone} />
+          <Row label="Received"  value={receivedAt} />
+          <Row label="Case Type" value={caseType} valueColor={tc} />
+          <Row label="Forum"     value={forum} />
         </Card>
         <Card>
           <SecLabel>Deadline Analysis</SecLabel>
-          <Row label="Limitation Deadline" value={item.deadline} />
-          <Row label="Days Remaining" value={item.dl + " days"}
-            valueColor={item.dl < 30 ? P.rose : P.accent} />
+          <Row label="Limitation Deadline" value={deadline} />
+          <Row label="Days Remaining"
+            value={daysLeft + " days"}
+            valueColor={Number(daysLeft) < 30 ? P.rose : P.accent} />
           <Row label="Status"
-            value={item.lim === "safe" ? "Safe — File at any time" : "Warning — File soon"}
-            valueColor={item.lim === "safe" ? P.accent : P.gold} />
+            value={limStatus === "safe" ? "Safe — File at any time" : "Warning — File soon"}
+            valueColor={limStatus === "safe" ? P.accent : P.gold} />
         </Card>
       </div>
- 
+
       <Card style={{ marginBottom: 14 }}>
         <SecLabel>Fact Summary</SecLabel>
         <p style={{ margin: 0, fontSize: 13, color: P.text, lineHeight: 1.8 }}>
-          {item.summary}
+          {summary}
         </p>
       </Card>
- 
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr",
         gap: 14, marginBottom: 14 }}>
         <Card>
           <SecLabel>Applicable Laws</SecLabel>
-          {item.laws.map((l, i) => (
-            <div key={i} style={{ fontSize: 12.5, color: P.blue, padding: "5px 0",
-              borderBottom: i < item.laws.length - 1 ? "1px solid " + P.border : "none" }}>
-              § {l}
-            </div>
-          ))}
+          {laws.length > 0
+            ? laws.map((l: string, i: number) => (
+                <div key={i} style={{ fontSize: 12.5, color: P.blue, padding: "5px 0",
+                  borderBottom: i < laws.length - 1 ? "1px solid " + P.border : "none" }}>
+                  § {l}
+                </div>
+              ))
+            : <div style={{ fontSize: 12, color: P.dim }}>No laws recorded yet.</div>
+          }
         </Card>
         <Card>
           <SecLabel>Questions for Advocate</SecLabel>
-          {item.questions.map((q, i) => (
-            <div key={i} style={{ fontSize: 12.5, color: P.text, padding: "5px 0",
-              borderBottom: i < item.questions.length - 1 ? "1px solid " + P.border : "none" }}>
-              ? {q}
-            </div>
-          ))}
+          {questions.length > 0
+            ? questions.map((q: string, i: number) => (
+                <div key={i} style={{ fontSize: 12.5, color: P.text, padding: "5px 0",
+                  borderBottom: i < questions.length - 1 ? "1px solid " + P.border : "none" }}>
+                  ? {q}
+                </div>
+              ))
+            : <div style={{ fontSize: 12, color: P.dim }}>No questions recorded yet.</div>
+          }
         </Card>
       </div>
- 
+
       <div style={{ display: "flex", gap: 10 }}>
         <button onClick={() => nav("ai-drafts")} style={{
           padding: "8px 18px", background: P.blue, color: "#fff",
@@ -1119,16 +1310,210 @@ function IntakeDetail({ item, nav }: {
           fontSize: 12, cursor: "pointer", fontFamily: "inherit",
         }}>📄 Download Brief PDF</button>
       </div>
+      {showCaseForm && (
+  <div style={{
+    position: "fixed", inset: 0, zIndex: 1000,
+    background: "rgba(0,0,0,0.45)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  }} onClick={() => setShowCaseForm(false)}>
+    <div onClick={e => e.stopPropagation()} style={{
+      width: 580, maxHeight: "90vh", background: P.s1,
+      borderRadius: 12, overflow: "hidden",
+      display: "flex", flexDirection: "column",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "18px 24px", background: P.accentL,
+        borderBottom: "1px solid " + P.border,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+      }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: P.accent }}>
+            Convert to Case
+          </div>
+          <div style={{ fontSize: 11, color: P.muted, marginTop: 2 }}>
+            {clientName} · {caseType}
+          </div>
+        </div>
+        <button onClick={() => setShowCaseForm(false)} style={{
+          background: "none", border: "none", fontSize: 20,
+          cursor: "pointer", color: P.muted,
+        }}>×</button>
+      </div>
+
+      {/* Form body */}
+      <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
+        {/* Court & Filing */}
+        <div style={{ fontSize: 10, fontWeight: 700, color: P.dim,
+          letterSpacing: "0.1em", textTransform: "uppercase",
+          marginBottom: 12 }}>Court & Filing Details</div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+          {[
+            { label: "CNR Number",    field: "cnr",          placeholder: "e.g. KABC010051322015" },
+            { label: "Suit Number",   field: "suit",         placeholder: "e.g. OS 1241/2024" },
+            { label: "Court",         field: "court",        placeholder: "e.g. City Civil Court" },
+            { label: "Judge",         field: "judge",        placeholder: "e.g. A.V. Nataraj, J." },
+            { label: "Suit Value",    field: "value",        placeholder: "e.g. Rs.42L" },
+            { label: "Filing Date",   field: "filing_date",  placeholder: "", type: "date" },
+            { label: "Next Hearing",  field: "next_hearing", placeholder: "", type: "date" },
+          ].map(({ label, field, placeholder, type }) => (
+            <div key={field}>
+              <div style={{ fontSize: 10, color: P.dim, marginBottom: 4,
+                textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</div>
+              <input
+                type={type || "text"}
+                value={(caseForm as any)[field]}
+                onChange={e => setCaseForm(prev => ({ ...prev, [field]: e.target.value }))}
+                placeholder={placeholder}
+                style={{ width: "100%", fontSize: 12, padding: "8px 11px",
+                  borderRadius: 7, border: "1px solid " + P.border,
+                  background: P.s2, color: P.text, outline: "none",
+                  fontFamily: "inherit", boxSizing: "border-box" as const }}
+              />
+            </div>
+          ))}
+
+          {/* Stage dropdown */}
+          <div>
+            <div style={{ fontSize: 10, color: P.dim, marginBottom: 4,
+              textTransform: "uppercase", letterSpacing: "0.07em" }}>Stage</div>
+            <select
+              value={caseForm.stage}
+              onChange={e => setCaseForm(prev => ({ ...prev, stage: e.target.value }))}
+              style={{ width: "100%", fontSize: 12, padding: "8px 11px",
+                borderRadius: 7, border: "1px solid " + P.border,
+                background: P.s2, color: P.text, outline: "none",
+                fontFamily: "inherit", cursor: "pointer" }}>
+              {["Filing","Summons","Written Statement","Issues","Evidence",
+                "Arguments","Judgment","Decree","Mediation","Cross-Exam"].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Parties */}
+        <div style={{ fontSize: 10, fontWeight: 700, color: P.dim,
+          letterSpacing: "0.1em", textTransform: "uppercase",
+          marginBottom: 12, marginTop: 4 }}>Parties & Advocate</div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+          {[
+            { label: "Party Designation",    field: "party_designation",    placeholder: "Plaintiff / Petitioner" },
+            { label: "Opposite Party",        field: "opposite_party",       placeholder: "e.g. Narayan S.A." },
+            { label: "Opposite Designation",  field: "opposite_designation", placeholder: "Defendant / Respondent" },
+            { label: "Advocate Name",         field: "advocate",             placeholder: "e.g. M.A. Fayaz Ahammed" },
+            { label: "Advocate Roll No.",     field: "advocate_roll",        placeholder: "e.g. KAR/1234/2015" },
+            { label: "Client Address",        field: "client_address",       placeholder: "Full address" },
+            { label: "Address for Service",   field: "advocate_address",     placeholder: "Advocate office address" },
+          ].map(({ label, field, placeholder }) => (
+            <div key={field}>
+              <div style={{ fontSize: 10, color: P.dim, marginBottom: 4,
+                textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</div>
+              <input
+                value={(caseForm as any)[field]}
+                onChange={e => setCaseForm(prev => ({ ...prev, [field]: e.target.value }))}
+                placeholder={placeholder}
+                style={{ width: "100%", fontSize: 12, padding: "8px 11px",
+                  borderRadius: 7, border: "1px solid " + P.border,
+                  background: P.s2, color: P.text, outline: "none",
+                  fontFamily: "inherit", boxSizing: "border-box" as const }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        padding: "16px 24px", borderTop: "1px solid " + P.border,
+        display: "flex", gap: 10, background: P.s1,
+      }}>
+        <button onClick={convertToCase} disabled={converting} style={{
+          flex: 1, padding: "10px", background: converting ? P.border : P.accent,
+          color: converting ? P.muted : "#fff", border: "none",
+          borderRadius: 8, fontSize: 13, fontWeight: 700,
+          cursor: converting ? "not-allowed" : "pointer", fontFamily: "inherit",
+        }}>
+          {converting ? "Creating Case..." : "✓ Create Case"}
+        </button>
+        <button onClick={() => setShowCaseForm(false)} style={{
+          padding: "10px 20px", background: P.s2, color: P.text,
+          border: "1px solid " + P.border, borderRadius: 8,
+          fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+        }}>Cancel</button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
 
+
 // ── CASES LIST ──
  
 function CaseList({ nav }: { nav: (s: string, d?: any) => void }) {
-  const [filter, setFilter] = useState("active");
-  const filtered = filter === "all" ? CASES : CASES.filter(c => c.status === filter);
- 
+  const [filter, setFilter]   = useState("active");
+  const [cases, setCases]     = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+  setLoading(true);
+  const { data, error } = await supabase
+    .from("cases")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  const dbCases = (!error && data && data.length > 0)
+    ? data.map(c => ({
+        ...c,
+        tc:                   typeColor(c.type || ""),
+        sc:                   stageColor(c.stage || "Filing"),
+        next:                 c.next_hearing || "—",
+        last:                 c.last_activity || "No activity recorded",
+        cnr:                  c.cnr || "—",
+        suit:                 c.suit || c.case_id || "—",
+        court:                c.court || "—",
+        judge:                c.judge || "TBD",
+        value:                c.value || "—",
+        client:               c.client || "—",
+        docs:                 c.docs || 0,
+        party_designation:    c.party_designation    || "Plaintiff",
+        opposite_party:       c.opposite_party       || "—",
+        opposite_designation: c.opposite_designation || "Defendant",
+        advocate:             c.advocate             || "—",
+        advocate_roll:        c.advocate_roll        || "—",
+        advocate_address:     c.advocate_address     || "—",
+        client_address:       c.client_address       || "—",
+        client_id_type:       c.client_id_type       || "—",
+        advocate2:            c.advocate2            || "—",
+        advocate2_roll:       c.advocate2_roll       || "—",
+        filing_date:          c.filing_date          || "—",
+        tl:                   [],
+      }))
+    : [];
+
+  // Always show mock cases + real DB cases (excluding any DB cases with same id as mock)
+  const merged = [
+    ...CASES,
+    ...dbCases.filter(db => !CASES.find(m => m.id === db.id || m.id === db.case_id)),
+  ];
+  setCases(merged);
+  setLoading(false);
+}
+    load();
+  }, []);
+
+  const filtered = filter === "all"
+  ? cases
+  : filter === "won"
+    ? cases.filter(c => c.status === "won" || c.status === "closed" || c.status === "disposed")
+    : cases.filter(c => c.status === filter);
+
   return (
     <div>
       <SectionTitle sub="Manage litigation · track stages · monitor hearings">
@@ -1143,13 +1528,27 @@ function CaseList({ nav }: { nav: (s: string, d?: any) => void }) {
             color: filter === f ? "#fff" : P.muted,
             border: "1px solid " + (filter === f ? P.accent : P.border),
             fontFamily: "inherit",
-          }}>{f === "won" ? "CLOSED / WON" : f.toUpperCase()}</button>
+          }}>{f === "won" ? "CLOSED / WON / DISPOSED" : f.toUpperCase()}</button>
         ))}
       </div>
+
+      {loading && (
+        <div style={{ textAlign: "center", padding: 40, color: P.dim, fontSize: 13 }}>
+          Loading cases...
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <Card>
+          <div style={{ textAlign: "center", padding: 24, color: P.dim, fontSize: 13 }}>
+            No cases found. Convert an intake brief to create your first case.
+          </div>
+        </Card>
+      )}
+
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {filtered.map(c => (
-          <Card key={c.id} onClick={() => nav("case-detail", c)}
-            accentColor={c.tc}>
+          <Card key={c.id} onClick={() => nav("case-detail", c)} accentColor={c.tc}>
             <div style={{ display: "flex", justifyContent: "space-between",
               alignItems: "center" }}>
               <div style={{ flex: 1 }}>
@@ -1159,8 +1558,8 @@ function CaseList({ nav }: { nav: (s: string, d?: any) => void }) {
                     {c.client}
                   </span>
                   <span style={{ fontSize: 10, color: P.dim }}>{c.suit}</span>
-                  <Pill label={c.type.replace(/_/g," ")} color={c.tc} />
-                  <Pill label={c.stage.toUpperCase()} color={c.sc} />
+                  <Pill label={(c.type||"").replace(/_/g," ")} color={c.tc} />
+                  <Pill label={(c.stage||"Filing").toUpperCase()} color={c.sc} />
                   {c.status === "won" && <Pill label="✓ WON" color={P.accent} />}
                 </div>
                 <div style={{ fontSize: 11.5, color: P.muted }}>
@@ -1170,9 +1569,11 @@ function CaseList({ nav }: { nav: (s: string, d?: any) => void }) {
               </div>
               <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: P.text }}>{c.value}</div>
-                {c.next && <div style={{ fontSize: 10.5, color: P.teal, marginTop: 3 }}>
-                  Next: {c.next}
-                </div>}
+                {c.next && c.next !== "—" && (
+                  <div style={{ fontSize: 10.5, color: P.teal, marginTop: 3 }}>
+                    Next: {c.next}
+                  </div>
+                )}
                 <div style={{ fontSize: 10, color: P.dim, marginTop: 2 }}>{c.docs} docs</div>
               </div>
             </div>
@@ -1584,19 +1985,14 @@ function EditableCard({ cardKey, title, fields, editMode, editData, setEditMode,
             fontSize: 23, fontWeight: 700, color: P.ink }}>{item.client}</h2>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 8 }}>
             <Pill label={item.suit} color={P.dim} />
-            <Pill label={item.stage.toUpperCase()} color={item.sc} />
-            <Pill label={item.type.replace(/_/g," ")} color={item.tc} />
+            <Pill label={(item.stage || "Filing").toUpperCase()} color={item.sc || P.dim} />
+            <Pill label={(item.type || "").replace(/_/g," ")} color={item.tc || P.muted} />
             {item.status === "won" && <Pill label="✓ DECREE PASSED" color={P.accent} />}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => nav("ai-drafts")} style={{
-            padding: "7px 16px", background: P.blue, color: "#fff",
-            border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700,
-            cursor: "pointer", fontFamily: "inherit",
-          }}>✨ AI Draft</button>
-          <button onClick={() => nav("documents")} style={{
-            padding: "7px 16px", background: P.s2, color: P.text,
+          <button onClick={() => nav("documents", { filterCase: item.suit && item.suit !== "—" ? item.suit : item.id })} style={{
+            padding: "7px 16px", background: P.blue, color:"#fff",
             border: "1px solid " + P.border, borderRadius: 6,
             fontSize: 11, cursor: "pointer", fontFamily: "inherit",
           }}>📎 Docs ({item.docs})</button>
@@ -1744,7 +2140,7 @@ function EditableCard({ cardKey, title, fields, editMode, editData, setEditMode,
                 + {item.docs - 4} more
               </div>
             )}
-            <button onClick={() => nav("documents")} style={{
+            <button onClick={() => nav("documents", { filterCase: item.suit && item.suit !== "—" ? item.suit : item.id })} style={{
               fontSize: 11, marginTop: 8, width: "100%", padding: "6px",
               background: P.s2, border: "1px solid " + P.border,
               borderRadius: 5, color: P.text, cursor: "pointer",
@@ -2176,20 +2572,36 @@ function EditableCard({ cardKey, title, fields, editMode, editData, setEditMode,
               Recent Orders & Updates
             </div>
            {(() => {
-  const allOrders = courtData.hearing_dates || courtData.case_history || [];
+  const timelineOrders = courtData.timeline_orders || [];
+const hearingDates = courtData.hearing_dates || courtData.case_history || [];
+
+// Merge: use timeline_orders (which have pdf_url) and fill in remaining hearing dates
+// Deduplicate by date — prefer timeline entry if same date exists in both
+const timelineDates = new Set(timelineOrders.map((o: any) => o.date));
+const extraHearings = hearingDates.filter((h: any) => !timelineDates.has(h.date));
+
+const allOrders = [
+  ...timelineOrders,
+  ...extraHearings,
+].sort((a: any, b: any) => {
+  // Sort descending by date (newest first)
+  const da = new Date(a.date?.split(' ').reverse().join('-') || 0);
+  const db = new Date(b.date?.split(' ').reverse().join('-') || 0);
+  return db.getTime() - da.getTime();
+});
   const visibleOrders = showAllOrders ? allOrders : allOrders.slice(0, 6);
   return (
     <>
       {/* Column headers */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1.2fr',
+        gridTemplateColumns: '1fr 1fr 1.2fr 0.8fr 0.8fr',
         gap: 8,
         padding: '4px 0 8px',
         borderBottom: '2px solid ' + P.border,
         marginBottom: 2,
       }}>
-        {['Business On Date', 'Hearing Date', 'Purpose'].map(col => (
+        {['Business On Date', 'Hearing Date', 'Purpose', 'Order', 'AI Brief'].map(col => (
           <div key={col} style={{
             fontSize: 9, fontWeight: 700, color: P.dim,
             letterSpacing: '0.08em', textTransform: 'uppercase',
@@ -2201,7 +2613,7 @@ function EditableCard({ cardKey, title, fields, editMode, editData, setEditMode,
       {visibleOrders.map((h: any, i: number) => (
         <div key={i} style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1.2fr',
+          gridTemplateColumns: '1fr 1fr 1.2fr 0.8fr 0.8fr',
           gap: 8,
           padding: '7px 0',
           borderBottom: '1px solid ' + P.border,
@@ -2230,20 +2642,76 @@ function EditableCard({ cardKey, title, fields, editMode, editData, setEditMode,
             {h.hearing_date || '—'}
           </div>
 
-          {/* Purpose + NEW badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ fontSize: 11.5, color: P.text }}>
-              {h.purpose || 'Hearing'}
-            </span>
-            {i === 0 && (
-              <span style={{
-                fontSize: 8, fontWeight: 700, padding: '1px 5px',
-                borderRadius: 8, background: P.accent + '18',
-                color: P.accent, border: '1px solid ' + P.accent + '30',
-                flexShrink: 0,
-              }}>NEW</span>
-            )}
-          </div>
+         {/* Purpose + NEW badge */}
+<div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+  <span style={{ fontSize: 11.5, color: P.text }}>
+    {h.purpose || 'Hearing'}
+  </span>
+  {i === 0 && (
+    <span style={{
+      fontSize: 8, fontWeight: 700, padding: '1px 5px',
+      borderRadius: 8, background: P.accent + '18',
+      color: P.accent, border: '1px solid ' + P.accent + '30',
+      flexShrink: 0,
+    }}>NEW</span>
+  )}
+</div>
+
+{/* ── ADD THESE TWO NEW CELLS ── */}
+
+{/* Download PDF */}
+<div>
+  {h.pdf_url ? (
+    <button
+      onClick={async () => {
+        const proxyUrl = `/api/court-pdf?file=${encodeURIComponent(h.pdf_url)}&cnr=${encodeURIComponent(item.cnr)}`;
+        try {
+          const res = await fetch(proxyUrl);
+          if (res.ok) {
+            const blob = await res.blob();
+            window.open(URL.createObjectURL(blob), '_blank');
+          } else {
+            window.open(`https://services.ecourts.gov.in/ecourtindia_v6/?p=casestatus/viewCase&type=cnr&cnrNumber=${encodeURIComponent(item.cnr)}&search_by=CNR`, '_blank');
+          }
+        } catch {
+          window.open(`https://services.ecourts.gov.in/ecourtindia_v6/?p=casestatus/viewCase&type=cnr&cnrNumber=${encodeURIComponent(item.cnr)}&search_by=CNR`, '_blank');
+        }
+      }}
+      style={{
+        fontSize: 10, fontWeight: 600, padding: '3px 8px',
+        background: P.s2, border: '1px solid ' + P.border,
+        borderRadius: 4, cursor: 'pointer',
+        fontFamily: 'inherit', color: P.text,
+      }}
+    >
+      📄 PDF
+    </button>
+  ) : (
+    <span style={{ fontSize: 10, color: P.dim }}>—</span>
+  )}
+</div>
+
+{/* View AI Brief */}
+<div>
+  {h.pdf_url ? (
+    <button
+      onClick={() => fetchAiBrief(h.pdf_url, h.purpose || 'Court Order')}
+      style={{
+        fontSize: 10, fontWeight: 600, padding: '3px 8px',
+        background: 'rgba(30,77,140,0.10)',
+        border: '1px solid rgba(30,77,140,0.25)',
+        borderRadius: 4, cursor: 'pointer',
+        fontFamily: 'inherit', color: P.blue,
+      }}
+    >
+      ✨ AI
+    </button>
+  ) : (
+    <span style={{ fontSize: 10, color: P.dim }}>—</span>
+  )}
+</div>
+          
+
 
         </div>
       ))}
@@ -2502,7 +2970,31 @@ function EditableCard({ cardKey, title, fields, editMode, editData, setEditMode,
 // ── DEADLINES SCREEN ──
  
 function Deadlines() {
-  const sorted = [...DEADLINES].sort((a,b) => a.days - b.days);
+  const [filterClient, setFilterClient] = useState("");
+  const [filterCase, setFilterCase]     = useState("");
+
+  const sorted = [...DEADLINES]
+    .filter(d => {
+      const matchClient = filterClient === "" ||
+        d.client.toLowerCase().includes(filterClient.toLowerCase());
+      const matchCase = filterCase === "" ||
+        d.caseId.toLowerCase().includes(filterCase.toLowerCase());
+      return matchClient && matchCase;
+    })
+    .sort((a, b) => a.days - b.days);
+
+  const inputS: React.CSSProperties = {
+    fontSize: 12, padding: "7px 11px",
+    borderRadius: 7, border: "1px solid " + P.border,
+    background: P.s1, color: P.text, outline: "none",
+    fontFamily: "inherit",
+  };
+  const labelS: React.CSSProperties = {
+    fontSize: 10, color: P.dim, marginBottom: 4,
+    display: "block", textTransform: "uppercase",
+    letterSpacing: "0.07em",
+  };
+
   return (
     <div>
       <SectionTitle sub="All tracked deadlines · Google Calendar synced">
@@ -2520,6 +3012,46 @@ function Deadlines() {
           value={String(DEADLINES.filter(d=>d.cal).length)}
           color={P.accent} sub={"of " + DEADLINES.length + " total"} />
       </div>
+
+      {/* ── Filter bar ── */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap",
+        alignItems: "flex-end", marginBottom: 16 }}>
+        <div>
+          <label style={labelS}>Client Name</label>
+          <input value={filterClient}
+            onChange={e => setFilterClient(e.target.value)}
+            placeholder="e.g. Meena Reddy"
+            style={{ ...inputS, width: 180 }} />
+        </div>
+        <div>
+          <label style={labelS}>Case / Intake ID</label>
+          <input value={filterCase}
+            onChange={e => setFilterCase(e.target.value)}
+            placeholder="e.g. CS-2024-089"
+            style={{ ...inputS, width: 180 }} />
+        </div>
+        <button onClick={() => { setFilterClient(""); setFilterCase(""); }}
+          style={{
+            fontSize: 11, padding: "7px 14px", borderRadius: 7,
+            border: "1px solid " + P.border,
+            background: P.s2, color: P.muted,
+            cursor: "pointer", fontFamily: "inherit",
+          }}>✕ Clear</button>
+        {(filterClient || filterCase) && (
+          <div style={{ fontSize: 11, color: P.dim, alignSelf: "center" }}>
+            {sorted.length} of {DEADLINES.length} deadlines
+          </div>
+        )}
+      </div>
+
+      {sorted.length === 0 && (
+        <Card>
+          <div style={{ textAlign: "center", padding: 24, color: P.dim, fontSize: 13 }}>
+            No deadlines match your filters.
+          </div>
+        </Card>
+      )}
+
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {sorted.map((d, i) => (
           <Card key={i} accentColor={d.uc}>
@@ -2539,7 +3071,9 @@ function Deadlines() {
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 {d.cal
-                  ? <span style={{ fontSize: 11, color: P.accent, fontWeight: 600 }}>📅 Synced</span>
+                  ? <span style={{ fontSize: 11, color: P.accent, fontWeight: 600 }}>
+                      📅 Synced
+                    </span>
                   : <button style={{ fontSize: 10.5, padding: "5px 12px",
                       background: P.s2, border: "1px solid " + P.border,
                       borderRadius: 5, cursor: "pointer", fontFamily: "inherit",
@@ -2570,306 +3104,370 @@ function Deadlines() {
 // ── CALENDAR SCREEN ──
  
 function CalendarView() {
-  const [events, setEvents]       = useState<any[]>([]);
-const [loading, setLoading]     = useState(true);
-const [showAddForm, setShowAddForm] = useState(false);
-const [form, setForm]           = useState({
-  title: '', event_date: '', event_type: 'hearing',
-  client_name: '', cnr_number: '', court: '', notes: '',
-});
-useEffect(() => {
-  async function load() {
-    setLoading(true);
-    const res = await fetch('/api/calendar');
-    const json = await res.json();
-    setEvents(json.events ?? []);
-    setLoading(false);
+  const [dbEvents, setDbEvents]       = useState<any[]>([]);
+  const [dbCases, setDbCases]         = useState<any[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [form, setForm] = useState({
+    title: '', event_date: '', event_type: 'hearing',
+    client_name: '', cnr_number: '', court: '', notes: '',
+  });
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        // Load calendar_events
+        const { data: evData } = await supabase
+          .from("calendar_events")
+          .select("*")
+          .order("event_date", { ascending: true });
+        setDbEvents(evData || []);
+
+        // Load cases with next_hearing
+        const { data: caseData } = await supabase
+          .from("cases")
+          .select("*")
+          .not("next_hearing", "is", null)
+          .eq("status", "active");
+        setDbCases(caseData || []);
+      } catch { /* silently fall back to mock */ }
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  // Build unified event list from all sources
+  const allEvents = [
+    ...dbCases.map(c => ({
+      id:          "case-" + c.id,
+      title:       (c.stage || "Hearing") + " — " + (c.suit || c.case_id || ""),
+      event_date:  c.next_hearing,
+      event_type:  "hearing",
+      client_name: c.client || c.client_name,
+      court:       c.court  || "",
+      accentColor: typeColor(c.type || ""),
+    })),
+    ...dbEvents.map(e => ({
+      ...e,
+      accentColor: e.event_type === "deadline" ? P.rose
+                 : e.event_type === "filing"   ? P.blue : P.teal,
+    })),
+    ...DEADLINES.map(d => ({
+      id:          "dl-" + d.caseId,
+      title:       d.task,
+      event_date:  d.due,
+      event_type:  d.type === "limitation" ? "deadline" : "hearing",
+      client_name: d.client,
+      court:       "",
+      accentColor: d.uc,
+    })),
+  ].sort((a, b) =>
+    new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
+  );
+
+  async function addEvent() {
+    try {
+      const { error } = await supabase
+        .from("calendar_events")
+        .insert([{ ...form, source: "manual" }]);
+      if (error) throw error;
+      setShowAddForm(false);
+      const { data } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .order("event_date", { ascending: true });
+      setDbEvents(data || []);
+    } catch (err: any) { alert("Save failed: " + err.message); }
   }
-  load();
-}, []);
-async function exportIcs() {
-  const res = await fetch('/api/calendar/export-ics', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ events }),
+
+  async function exportIcs() {
+    try {
+      const res  = await fetch('/api/calendar/export-ics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ events: allEvents }),
+      });
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'aadya-hearings.ics'; a.click();
+    } catch { alert("Export failed"); }
+  }
+
+ // Replace the hardcoded `days` array and the grid with this:
+const today = new Date();
+const year  = today.getFullYear();
+const month = today.getMonth();
+const [viewMonth, setViewMonth] = useState(month);
+const [viewYear, setViewYear]   = useState(year);
+
+const firstDay   = new Date(viewYear, viewMonth, 1).getDay();
+const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+const monthName  = new Date(viewYear, viewMonth).toLocaleString("en-IN", { month: "long", year: "numeric" });
+
+// Build calendar cells (empty + day numbers)
+const cells = [
+  ...Array(firstDay).fill(null),
+  ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+];
+
+// Check if a day has events
+function eventsOnDay(day: number) {
+  return allEvents.filter(e => {
+    const d = new Date(e.event_date + "T00:00:00");
+    return d.getFullYear() === viewYear && d.getMonth() === viewMonth && d.getDate() === day;
   });
-  const blob = await res.blob();
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = 'aadya-hearings.ics'; a.click();
-}
-async function addEvent() {
-  await fetch('/api/calendar/event', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(form),
-  });
-  setShowAddForm(false);
-  // Reload events
-  const res = await fetch('/api/calendar');
-  const json = await res.json();
-  setEvents(json.events ?? []);
 }
 
-  const days = [
-    {name:"Sun",num:13,tag:null},{name:"Mon",num:14,tag:null},
-    {name:"Tue",num:15,tag:null},{name:"Wed",num:16,tag:null},
-    {name:"Thu",num:17,today:true,tag:null},{name:"Fri",num:18,tag:null},
-    {name:"Sat",num:19,tag:null},{name:"Sun",num:20,tag:{label:"DUE",color:P.rose}},
-    {name:"Mon",num:21,tag:null},{name:"Tue",num:22,tag:{label:"Hearing",color:P.teal}},
-    {name:"Wed",num:23,tag:null},{name:"Thu",num:24,tag:null},
-    {name:"Fri",num:25,tag:{label:"Hearing",color:P.teal}},
-    {name:"Sat",num:26,tag:null},
-  ];
-  const mockevents = [
-    {day:20,color:P.rose,title:"Anand Murthy — Filing Deadline",sub:"City Civil Court · OS 1241/2024",note:"File Rejoinder before 10:30 AM"},
-    {day:22,color:P.teal,title:"Anand Murthy — Evidence Hearing",sub:"City Civil Court Room 7 · OS 1241/2024",note:"Appear for evidence recording"},
-    {day:25,color:P.teal,title:"Ibrahim Khan — First Date",sub:"Small Causes Court Room 3 · RCP 12/2025",note:"Present for admission"},
-    {day:29,color:P.blue,title:"Lakshmi Devi — Mediation Session 2",sub:"Family Court Room 12 · HMP 78/2024",note:"Attend session with client"},
-  ];
   return (
     <div>
-      
-      {/* ── Calendar Header Bar ── */}
-        <div style={{
-          display: "flex", justifyContent: "space-between",
-          alignItems: "center", marginBottom: 16,
-        }}>
-          <SectionTitle sub="Hearings, deadlines and events across all cases">
-            Hearing Calendar
-          </SectionTitle>
-          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
-
-            {/* Export .ics button */}
-            <button onClick={exportIcs} style={{
-              display: "flex", alignItems: "center", gap: 7,
-              padding: "8px 16px",
-              background: P.s1,
-              border: "1px solid " + P.border,
-              borderRadius: 8, fontSize: 12, fontWeight: 600,
-              color: P.muted, cursor: "pointer", fontFamily: "inherit",
-              transition: "all 0.12s",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = P.teal;
-              e.currentTarget.style.color = P.teal;
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = P.border;
-              e.currentTarget.style.color = P.muted;
-            }}
-            >
-              ⬇ Export .ics
-            </button>
-
-            {/* Add Event button */}
-            <button onClick={() => setShowAddForm(true)} style={{
-              display: "flex", alignItems: "center", gap: 7,
-              padding: "8px 16px",
-              background: P.accent,
-              border: "none",
-              borderRadius: 8, fontSize: 12, fontWeight: 700,
-              color: "#fff", cursor: "pointer", fontFamily: "inherit",
-            }}>
-              + Add Event
-            </button>
-
-          </div>
+      <div style={{ display: "flex", justifyContent: "space-between",
+        alignItems: "center", marginBottom: 16 }}>
+        <SectionTitle sub="Hearings, deadlines and events across all cases">
+          Hearing Calendar
+        </SectionTitle>
+        <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+          <button onClick={exportIcs} style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "8px 16px", background: P.s1,
+            border: "1px solid " + P.border, borderRadius: 8,
+            fontSize: 12, fontWeight: 600, color: P.muted,
+            cursor: "pointer", fontFamily: "inherit",
+          }}>⬇ Export .ics</button>
+          <button onClick={() => setShowAddForm(true)} style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "8px 16px", background: P.accent, border: "none",
+            borderRadius: 8, fontSize: 12, fontWeight: 700,
+            color: "#fff", cursor: "pointer", fontFamily: "inherit",
+          }}>+ Add Event</button>
         </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)",
-        gap: 8, marginBottom: 8 }}>
-        {days.map((d, i) => (
-          <div key={i} style={{
-            background: d.today ? P.accentL : P.s1,
-            border: "1px solid " + (d.today ? P.accent : P.border),
-            borderRadius: 9, padding: "10px 6px", textAlign: "center",
-          }}>
-            <div style={{ fontSize: 9, color: P.dim, marginBottom: 4,
-              textTransform: "uppercase", letterSpacing: "0.06em" }}>{d.name}</div>
-            <div style={{ fontFamily: "'Lora', Georgia, serif",
-              fontSize: 19, fontWeight: 700,
-              color: d.today ? P.accent : (d.num >= 18 ? P.ink : P.muted) }}>
-              {d.num}
-            </div>
-            {d.tag && (
-              <span style={{ fontSize: 8, fontWeight: 700, padding: "2px 4px",
-                borderRadius: 3, background: d.tag.color + "18",
-                color: d.tag.color, display: "block", marginTop: 4 }}>
-                {d.tag.label}
-              </span>
-            )}
-          </div>
-          
-        ))}
       </div>
-      
 
+      {/* Mini calendar strip */}
+      {/* Month nav */}
+<div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+  <button onClick={() => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  }} style={{ background: "none", border: "1px solid " + P.border,
+    borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 14, color: P.muted }}>‹</button>
+  <span style={{ fontFamily: "'Lora', Georgia, serif", fontSize: 16,
+    fontWeight: 700, color: P.ink, minWidth: 160, textAlign: "center" }}>{monthName}</span>
+  <button onClick={() => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  }} style={{ background: "none", border: "1px solid " + P.border,
+    borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 14, color: P.muted }}>›</button>
+  <button onClick={() => { setViewMonth(month); setViewYear(year); }}
+    style={{ fontSize: 11, color: P.accent, background: "none", border: "none",
+      cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>Today</button>
+</div>
+
+{/* Day headers */}
+<div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+  {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+    <div key={d} style={{ fontSize: 9.5, fontWeight: 700, color: P.dim,
+      textAlign: "center", letterSpacing: "0.07em", textTransform: "uppercase",
+      padding: "4px 0" }}>{d}</div>
+  ))}
+</div>
+
+{/* Calendar grid */}
+<div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 20 }}>
+  {cells.map((day, i) => {
+    if (!day) return <div key={"empty-" + i} />;
+    const isToday = day === today.getDate() && viewMonth === month && viewYear === year;
+    const dayEvents = eventsOnDay(day);
+    return (
+      <div key={day} style={{
+        background: isToday ? P.accentL : P.s1,
+        border: "1px solid " + (isToday ? P.accent : P.border),
+        borderRadius: 8, padding: "6px 4px", minHeight: 60,
+        textAlign: "center",
+      }}>
+        <div style={{ fontFamily: "'Lora', Georgia, serif", fontSize: 15,
+          fontWeight: 700, color: isToday ? P.accent : P.ink }}>{day}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 3 }}>
+          {dayEvents.slice(0, 2).map((ev, j) => (
+            <div key={j} style={{
+              fontSize: 8, fontWeight: 600, padding: "1px 4px",
+              borderRadius: 3, background: (ev.accentColor || P.teal) + "20",
+              color: ev.accentColor || P.teal,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>{ev.title?.split("—")[0]?.trim() || ev.event_type}</div>
+          ))}
+          {dayEvents.length > 2 && (
+            <div style={{ fontSize: 7, color: P.dim }}>+{dayEvents.length - 2} more</div>
+          )}
+        </div>
+      </div>
+    );
+  })}
+</div>
+
+      {/* Events list */}
       <div style={{ fontSize: 9.5, fontWeight: 700, color: P.dim,
         letterSpacing: "0.1em", textTransform: "uppercase",
-        marginTop: 8, marginBottom: 8 }}>Upcoming Events</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {loading && <div style={{textAlign:'center', color: P.dim}}>Loading hearings...</div>}
+        marginBottom: 10 }}>Upcoming Events</div>
 
-        {events.map((e, i) => (
-          <Card key={e.id || i} accentColor={
-            e.event_type === 'hearing'  ? P.teal :
-            e.event_type === 'deadline' ? P.rose :
-            e.event_type === 'filing'   ? P.blue : P.gold
-          }>
-            <div style={{ display:'flex', gap:14, alignItems:'center' }}>
-              {/* Date badge */}
-              <div style={{ background: P.tealL, borderRadius:8,
-                            padding:'8px 14px', textAlign:'center', minWidth:56 }}>
-                <div style={{ fontSize:22, fontWeight:700, color: P.teal }}>
-                  {new Date(e.event_date).getDate()}
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 32, color: P.dim, fontSize: 13 }}>
+          Loading calendar...
+        </div>
+      ) : allEvents.length === 0 ? (
+        <Card>
+          <div style={{ textAlign: "center", padding: 24, color: P.dim, fontSize: 13 }}>
+            No upcoming events. Add one using the button above.
+          </div>
+        </Card>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {allEvents.map((e, i) => {
+            const d     = new Date(e.event_date + "T00:00:00");
+            const color = e.accentColor || P.teal;
+            return (
+              <Card key={e.id || i} accentColor={color}>
+                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                  <div style={{
+                    background: color + "18", border: "1px solid " + color + "30",
+                    borderRadius: 8, padding: "8px 14px",
+                    textAlign: "center", minWidth: 56, flexShrink: 0,
+                  }}>
+                    <div style={{ fontFamily: "'Lora', Georgia, serif",
+                      fontSize: 22, fontWeight: 700, color, lineHeight: 1 }}>
+                      {d.getDate()}
+                    </div>
+                    <div style={{ fontSize: 9, color: P.dim, marginTop: 2,
+                      textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      {d.toLocaleString("en-IN", { month: "short" })}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700,
+                      color: P.ink, marginBottom: 2 }}>
+                      {e.title}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: P.muted }}>
+                      {e.client_name}{e.court ? " · " + e.court : ""}
+                    </div>
+                  </div>
+                  <Pill label={(e.event_type || "HEARING").toUpperCase()} color={color} />
                 </div>
-                <div style={{ fontSize:9, color: P.dim }}>
-                  {new Date(e.event_date).toLocaleString('en-IN',{month:'short'}).toUpperCase()}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add Event slide-in panel — keep your existing JSX here unchanged */}
+      {showAddForm && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: "rgba(0,0,0,0.4)",
+          display: "flex", alignItems: "center", justifyContent: "flex-end",
+        }} onClick={() => setShowAddForm(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: 420, height: "100vh", background: P.s1,
+            borderLeft: "1px solid " + P.border,
+            display: "flex", flexDirection: "column",
+            boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
+          }}>
+            <div style={{
+              padding: "20px 24px 16px", borderBottom: "1px solid " + P.border,
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              background: P.accentL,
+            }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: P.accent }}>
+                  Add Calendar Event
+                </div>
+                <div style={{ fontSize: 11, color: P.muted, marginTop: 2 }}>
+                  Saved to Supabase · appears in all calendar views
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize:13, fontWeight:700 }}>{e.title}</div>
-                <div style={{ fontSize:11.5, color: P.muted }}>
-                  {e.client_name} · {e.court}
+              <button onClick={() => setShowAddForm(false)} style={{
+                background: "none", border: "none", fontSize: 20,
+                cursor: "pointer", color: P.muted, lineHeight: 1,
+              }}>×</button>
+            </div>
+            <div style={{ padding: "20px 24px", flex: 1, overflowY: "auto" }}>
+              {[
+                { label:"Event Title *", field:"title",       type:"text",     placeholder:"e.g. Evidence Hearing — OS 1241" },
+                { label:"Date *",        field:"event_date",  type:"date",     placeholder:"" },
+                { label:"Client Name",   field:"client_name", type:"text",     placeholder:"e.g. Anand Murthy" },
+                { label:"CNR Number",    field:"cnr_number",  type:"text",     placeholder:"e.g. KABC010051322015" },
+                { label:"Court",         field:"court",       type:"text",     placeholder:"e.g. City Civil Court" },
+                { label:"Notes",         field:"notes",       type:"textarea", placeholder:"Any notes..." },
+              ].map(({ label: lbl, field, type, placeholder }) => (
+                <div key={field} style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: P.dim,
+                    letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>
+                    {lbl}
+                  </div>
+                  {type === "textarea" ? (
+                    <textarea rows={3}
+                      value={(form as any)[field]}
+                      onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
+                      placeholder={placeholder}
+                      style={{ width:"100%", fontSize:12, padding:"8px 11px",
+                        borderRadius:7, border:"1px solid "+P.border,
+                        background:P.s2, color:P.text, outline:"none",
+                        fontFamily:"inherit", resize:"vertical" }} />
+                  ) : (
+                    <input type={type}
+                      value={(form as any)[field]}
+                      onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
+                      placeholder={placeholder}
+                      style={{ width:"100%", fontSize:12, padding:"8px 11px",
+                        borderRadius:7, border:"1px solid "+P.border,
+                        background:P.s2, color:P.text, outline:"none",
+                        fontFamily:"inherit" }} />
+                  )}
                 </div>
-                {e.source === 'ecourts' && (
-                  <span style={{ fontSize:9, color: P.teal }}>● LIVE FROM ECOURTS</span>
-                )}
+              ))}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:P.dim,
+                  letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:8 }}>
+                  Event Type
+                </div>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {["hearing","deadline","filing","meeting"].map(t => (
+                    <button key={t}
+                      onClick={() => setForm(prev => ({ ...prev, event_type: t }))}
+                      style={{
+                        padding:"5px 14px", borderRadius:20,
+                        fontSize:11, fontWeight:700, cursor:"pointer",
+                        background: form.event_type === t ? P.accent : P.s1,
+                        color: form.event_type === t ? "#fff" : P.muted,
+                        border:"1px solid "+(form.event_type === t ? P.accent : P.border),
+                        fontFamily:"inherit",
+                      }}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </Card>
-        ))}
-
-              </div>
-              {/* ── Add Event Modal ── */}
-        {showAddForm && (
-          <div style={{
-            position: "fixed", inset: 0, zIndex: 1000,
-            background: "rgba(0,0,0,0.4)",
-            display: "flex", alignItems: "center", justifyContent: "flex-end",
-          }} onClick={() => setShowAddForm(false)}>
-
-            <div onClick={e => e.stopPropagation()} style={{
-              width: 420, height: "100vh",
-              background: P.s1,
-              borderLeft: "1px solid " + P.border,
-              display: "flex", flexDirection: "column",
-              boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
-            }}>
-
-              {/* Header */}
-              <div style={{
-                padding: "20px 24px 16px",
-                borderBottom: "1px solid " + P.border,
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                background: P.accentL,
-              }}>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: P.accent }}>
-                    Add Calendar Event
-                  </div>
-                  <div style={{ fontSize: 11, color: P.muted, marginTop: 2 }}>
-                    Saved to Supabase · appears in all calendar views
-                  </div>
-                </div>
-                <button onClick={() => setShowAddForm(false)} style={{
-                  background: "none", border: "none", fontSize: 20,
-                  cursor: "pointer", color: P.muted, lineHeight: 1,
-                }}>×</button>
-              </div>
-
-              {/* Form fields */}
-              <div style={{ padding: "20px 24px", flex: 1, overflowY: "auto" }}>
-                {[
-                  { label: "Event Title *",   field: "title",       type: "text",   placeholder: "e.g. Evidence Hearing — OS 1241" },
-                  { label: "Date *",          field: "event_date",  type: "date",   placeholder: "" },
-                  { label: "Client Name",     field: "client_name", type: "text",   placeholder: "e.g. Anand Murthy" },
-                  { label: "CNR Number",      field: "cnr_number",  type: "text",   placeholder: "e.g. KABC010051322015" },
-                  { label: "Court",           field: "court",       type: "text",   placeholder: "e.g. City Civil Court" },
-                  { label: "Notes",           field: "notes",       type: "textarea", placeholder: "Any notes or instructions..." },
-                ].map(({ label: lbl, field, type, placeholder }) => (
-                  <div key={field} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: P.dim,
-                      letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>
-                      {lbl}
-                    </div>
-                    {type === "textarea" ? (
-                      <textarea
-                        rows={3}
-                        value={(form as any)[field]}
-                        onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
-                        placeholder={placeholder}
-                        style={{ width: "100%", fontSize: 12, padding: "8px 11px",
-                          borderRadius: 7, border: "1px solid " + P.border,
-                          background: P.s2, color: P.text, outline: "none",
-                          fontFamily: "inherit", resize: "vertical" }}
-                      />
-                    ) : (
-                      <input
-                        type={type}
-                        value={(form as any)[field]}
-                        onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
-                        placeholder={placeholder}
-                        style={{ width: "100%", fontSize: 12, padding: "8px 11px",
-                          borderRadius: 7, border: "1px solid " + P.border,
-                          background: P.s2, color: P.text, outline: "none",
-                          fontFamily: "inherit" }}
-                      />
-                    )}
-                  </div>
-                ))}
-
-                {/* Event type selector */}
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: P.dim,
-                    letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
-                    Event Type
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {["hearing","deadline","filing","meeting"].map(t => (
-                      <button key={t}
-                        onClick={() => setForm(prev => ({ ...prev, event_type: t }))}
-                        style={{
-                          padding: "5px 14px", borderRadius: 20,
-                          fontSize: 11, fontWeight: 700, cursor: "pointer",
-                          background: form.event_type === t ? P.accent : P.s1,
-                          color: form.event_type === t ? "#fff" : P.muted,
-                          border: "1px solid " + (form.event_type === t ? P.accent : P.border),
-                          fontFamily: "inherit",
-                        }}>
-                        {t.charAt(0).toUpperCase() + t.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer buttons */}
-              <div style={{ padding: "16px 24px", borderTop: "1px solid " + P.border,
-                display: "flex", gap: 10 }}>
-                <button onClick={addEvent} style={{
-                  flex: 1, padding: "10px", background: P.accent, color: "#fff",
-                  border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>
-                  Save Event
-                </button>
-                <button onClick={() => setShowAddForm(false)} style={{
-                  padding: "10px 20px", background: P.s2, color: P.text,
-                  border: "1px solid " + P.border, borderRadius: 8,
-                  fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-                }}>
-                  Cancel
-                </button>
-              </div>
+            <div style={{ padding:"16px 24px", borderTop:"1px solid "+P.border,
+              display:"flex", gap:10 }}>
+              <button onClick={addEvent} style={{
+                flex:1, padding:"10px", background:P.accent, color:"#fff",
+                border:"none", borderRadius:8, fontSize:13, fontWeight:700,
+                cursor:"pointer", fontFamily:"inherit",
+              }}>Save Event</button>
+              <button onClick={() => setShowAddForm(false)} style={{
+                padding:"10px 20px", background:P.s2, color:P.text,
+                border:"1px solid "+P.border, borderRadius:8,
+                fontSize:13, cursor:"pointer", fontFamily:"inherit",
+              }}>Cancel</button>
             </div>
           </div>
-        )}
-
-            </div>
-          );
-        }
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── DAILY CAUSE LIST SCREEN ──
 
@@ -3124,62 +3722,652 @@ function DailyCauseList({ nav }: { nav: (s: string, d?: any) => void }) {
  
 // ── DOCUMENTS SCREEN ──
  
-function Documents() {
-  const docs = [
-    {name:"Sale Deed — Suresh Gowda 1998.pdf",type:"SALE DEED",size:"2.4 MB",date:"Today",case:"INT-041",color:P.accent,verified:true,parsed:true},
-    {name:"EC_SureshGowda_1998-2026.pdf",type:"ENCUMBRANCE",size:"890 KB",date:"Today",case:"INT-041",color:P.gold,verified:false,parsed:false},
-    {name:"Cheque_MeenaReddy_bounce.jpg",type:"CHEQUE",size:"340 KB",date:"Yesterday",case:"INT-040",color:P.accent,verified:true,parsed:true},
-    {name:"Notice_RPAD_MeenaReddy.pdf",type:"LEGAL NOTICE",size:"1.1 MB",date:"Yesterday",case:"INT-040",color:P.accent,verified:true,parsed:true},
-    {name:"Plaint_OS1241_2024.pdf",type:"PLAINT",size:"3.2 MB",date:"Apr 15",case:"CS-2024-089",color:P.accent,verified:true,parsed:true},
-    {name:"WS_Defendant_OS1241.pdf",type:"WRITTEN STATEMENT",size:"2.8 MB",date:"Apr 2",case:"CS-2024-089",color:P.gold,verified:false,parsed:false},
+function Documents({ detail }: { detail?: any }) {
+
+// Then initialize filterCase from detail if provided:
+const [filterCase, setFilterCase] = useState(detail?.filterCase || "");
+  const [parsing, setParsing] = useState<string | null>(null);   // doc id being parsed
+  const [expanded, setExpanded] = useState<string | null>(null); // doc id expanded
+  const [realDocs, setRealDocs]         = useState<any[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [filterClient, setFilterClient] = useState("");
+  const [filterType, setFilterType]     = useState("all");
+  const [dragging, setDragging]         = useState(false);
+  const [uploading, setUploading]       = useState(false);
+  const [uploadMsg, setUploadMsg]       = useState<{text:string;ok:boolean}|null>(null);
+  const [showForm, setShowForm]         = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadForm, setUploadForm]     = useState({
+    client_id:"", client_name:"", case_number:"", doc_type:"",
+  });
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const MOCK_DOCS = [
+    { id:"mock-1", file_name:"Sale Deed — Suresh Gowda 1998.pdf",
+      doc_type:"SALE DEED", file_size:"2.4 MB",
+      created_at: new Date().toISOString(),
+      case_number:"INT-041", client_name:"Suresh Gowda", client_id:"CLT-001",
+      verified:true, ai_parsed:true, file_url:null, is_mock:true },
+    { id:"mock-2", file_name:"EC_SureshGowda_1998-2026.pdf",
+      doc_type:"ENCUMBRANCE", file_size:"890 KB",
+      created_at: new Date(Date.now() - 86400000).toISOString(),
+      case_number:"INT-041", client_name:"Suresh Gowda", client_id:"CLT-001",
+      verified:false, ai_parsed:false, file_url:null, is_mock:true },
+    { id:"mock-3", file_name:"Cheque_MeenaReddy_bounce.jpg",
+      doc_type:"CHEQUE", file_size:"340 KB",
+      created_at: new Date(Date.now() - 86400000).toISOString(),
+      case_number:"INT-040", client_name:"Meena Reddy", client_id:"CLT-002",
+      verified:true, ai_parsed:true, file_url:null, is_mock:true },
+    { id:"mock-4", file_name:"Notice_RPAD_MeenaReddy.pdf",
+      doc_type:"LEGAL NOTICE", file_size:"1.1 MB",
+      created_at: new Date(Date.now() - 86400000).toISOString(),
+      case_number:"INT-040", client_name:"Meena Reddy", client_id:"CLT-002",
+      verified:true, ai_parsed:true, file_url:null, is_mock:true },
+    { id:"mock-5", file_name:"Plaint_OS1241_2024.pdf",
+      doc_type:"PLAINT", file_size:"3.2 MB",
+      created_at: new Date(Date.now() - 172800000).toISOString(),
+      case_number:"CS-2024-089", client_name:"Leena Madan K", client_id:"CLT-003",
+      verified:true, ai_parsed:true, file_url:null, is_mock:true },
+    { id:"mock-6", file_name:"WS_Defendant_OS1241.pdf",
+      doc_type:"WRITTEN STATEMENT", file_size:"2.8 MB",
+      created_at: new Date(Date.now() - 172800000).toISOString(),
+      case_number:"CS-2024-089", client_name:"Leena Madan K", client_id:"CLT-003",
+      verified:false, ai_parsed:false, file_url:null, is_mock:true },
   ];
+
+  async function loadDocs() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("documents").select("*")
+      .order("created_at", { ascending: false });
+    if (!error && data) setRealDocs(data);
+    setLoading(false);
+  }
+  useEffect(() => { loadDocs(); }, []);
+
+  const allDocs       = [...realDocs, ...MOCK_DOCS];
+  const totalDocs     = allDocs.length;
+  const aiParsed      = allDocs.filter(d => d.ai_parsed).length;
+  const pendingReview = allDocs.filter(d => !d.verified).length;
+
+  const docTypes = ["all", ...Array.from(
+    new Set(allDocs.map(d => d.doc_type).filter(Boolean))
+  )];
+
+  const filtered = allDocs.filter(d => {
+    const matchClient = filterClient === "" ||
+      d.client_id?.toLowerCase().includes(filterClient.toLowerCase()) ||
+      d.client_name?.toLowerCase().includes(filterClient.toLowerCase());
+    const matchCase = filterCase === "" ||
+      (d.case_number ?? "").toLowerCase().includes(filterCase.toLowerCase());
+    const matchType = filterType === "all" || d.doc_type === filterType;
+    return matchClient && matchCase && matchType;
+  });
+
+  function fmtDate(iso: string) {
+    const d   = new Date(iso);
+    const now = new Date();
+    const diffDays = Math.floor(
+      (now.getTime() - d.getTime()) / 86400000
+    );
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    return d.toLocaleDateString("en-IN", { day:"numeric", month:"short" });
+  }
+
+  function onDragOver(e: React.DragEvent) {
+    e.preventDefault(); setDragging(true);
+  }
+  function onDragLeave() { setDragging(false); }
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault(); setDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) openForm(files);
+  }
+  function onFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) openForm(files);
+  }
+  function openForm(files: File[]) {
+    setPendingFiles(files);
+    setUploadForm({ client_id:"", client_name:"", case_number:"", doc_type:"" });
+    setShowForm(true);
+  }
+
+  async function uploadFiles() {
+    if (!uploadForm.client_name.trim()) {
+      setUploadMsg({ text:"Client name is required.", ok:false });
+      return;
+    }
+    setUploading(true);
+    setUploadMsg(null);
+    let successCount = 0;
+    for (const file of pendingFiles) {
+      const clientId = uploadForm.client_id.trim() || "MANUAL";
+      const filePath = `${clientId}/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage
+        .from("documents").upload(filePath, file);
+      if (upErr) { console.error(upErr); continue; }
+      const { data: urlData } = supabase.storage
+        .from("documents").getPublicUrl(filePath);
+      const ext = file.name.split(".").pop()?.toUpperCase() || "FILE";
+      await supabase.from("documents").insert([{
+        client_id:   uploadForm.client_id.trim() || null,
+        client_name: uploadForm.client_name.trim(),
+        case_number: uploadForm.case_number.trim() || null,
+        doc_type:    uploadForm.doc_type || ext,
+        file_name:   file.name,
+        file_url:    urlData.publicUrl,
+        verified:    false,
+        ai_parsed:   false,
+        created_at:  new Date().toISOString(),
+      }]);
+      successCount++;
+    }
+    setUploading(false);
+    if (successCount > 0) {
+      setUploadMsg({ text:`${successCount} file(s) uploaded!`, ok:true });
+      setShowForm(false);
+      setPendingFiles([]);
+      await loadDocs();
+      setTimeout(() => setUploadMsg(null), 3000);
+    } else {
+      setUploadMsg({ text:"Upload failed. Check console (F12).", ok:false });
+    }
+  }
+
+  const inputS: React.CSSProperties = {
+    fontSize:12, padding:"7px 11px",
+    borderRadius:7, border:"1px solid " + P.border,
+    background:P.s1, color:P.text, outline:"none",
+    fontFamily:"inherit",
+  };
+  const labelS: React.CSSProperties = {
+    fontSize:10, color:P.dim, marginBottom:4,
+    display:"block", textTransform:"uppercase",
+    letterSpacing:"0.07em",
+  };
+  async function parseDocument(doc: any) {
+  if (!doc.file_url) {
+    alert("No file URL available for this document.");
+    return;
+  }
+  setParsing(doc.id);
+  try {
+    const res  = await fetch("/api/parse-document", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        document_id: doc.id,
+        file_url:    doc.file_url,
+        doc_type:    doc.doc_type,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error);
+    // Refresh docs list to show updated ai_parsed status
+    await loadDocs();
+    setExpanded(doc.id); // auto-expand to show results
+  } catch (err: any) {
+    alert("Parse failed: " + err.message);
+  } finally {
+    setParsing(null);
+  }
+}
+
+// Add this helper to render extracted fields
+function ExtractedFields({ data }: { data: any }) {
+  if (!data) return null;
+  return (
+    <div style={{
+      marginTop: 10, padding: "12px 14px",
+      background: P.accentL,
+      border: "1px solid rgba(45,106,79,0.15)",
+      borderRadius: 8,
+    }}>
+      <div style={{ fontSize: 9.5, fontWeight: 700, color: P.accent,
+        letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
+        ✨ AI Extracted Fields
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px" }}>
+        {Object.entries(data).map(([key, val]) => (
+          <div key={key} style={{ padding: "4px 0",
+            borderBottom: "1px solid rgba(45,106,79,0.1)", fontSize: 11.5 }}>
+            <span style={{ color: P.dim, textTransform: "capitalize",
+              fontSize: 10 }}>
+              {key.replace(/_/g, " ")}
+            </span>
+            <div style={{ color: P.text, fontWeight: 600, marginTop: 1 }}>
+              {typeof val === "object"
+                ? JSON.stringify(val, null, 1)
+                : String(val) || "—"}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+    </div>
+    
+  );
+}
+
+  // ── small inline pill matching the screenshot style ──
+  function StatusPill({ verified, aiParsed: ap }: {
+    verified: boolean; aiParsed: boolean;
+  }) {
+    return (
+      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+        {verified
+          ? <span style={{
+              fontSize:11, padding:"3px 10px", borderRadius:20,
+              border:"1px solid rgba(45,106,79,0.3)",
+              color:P.accent, background:P.accentL,
+              fontWeight:600, whiteSpace:"nowrap" as const,
+            }}>✓ Verified</span>
+          : <span style={{
+              fontSize:11, padding:"3px 10px", borderRadius:20,
+              border:"1px solid rgba(139,105,20,0.3)",
+              color:P.gold, background:P.goldL,
+              fontWeight:600,
+            }}>Pending</span>
+        }
+        {ap && (
+          <span style={{
+            fontSize:11, padding:"3px 10px", borderRadius:20,
+            border:"1px solid rgba(26,100,112,0.3)",
+            color:P.teal, background:P.tealL,
+            fontWeight:600, whiteSpace:"nowrap" as const,
+          }}>✨ AI Parsed</span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       <SectionTitle sub="All uploaded documents · AI parsing enabled">
         Document Vault
       </SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)",
-        gap: 12, marginBottom: 20 }}>
-        <StatBox label="Total Documents" value="6" color={P.blue} sub="Across all cases" />
-        <StatBox label="AI Parsed" value="4" color={P.teal} sub="Key fields extracted" />
-        <StatBox label="Pending Review" value="2" color={P.gold} sub="Needs verification" />
+
+      {/* ── Stat cards ── */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)",
+        gap:12, marginBottom:20 }}>
+        <StatBox label="Total Documents" value={String(totalDocs)}
+          color={P.blue} sub="Across all cases" />
+        <StatBox label="AI Parsed" value={String(aiParsed)}
+          color={P.teal} sub="Key fields extracted" />
+        <StatBox label="Pending Review" value={String(pendingReview)}
+          color={P.gold} sub="Needs verification" />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {docs.map((d, i) => (
-          <Card key={i} accentColor={d.color}>
-            <div style={{ display: "flex", justifyContent: "space-between",
-              alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>
-                  📄 {d.name}
-                </div>
-                <div style={{ fontSize: 11, color: P.muted, marginTop: 3 }}>
-                  {d.type} · {d.size} · {d.date} · {d.case}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                {d.verified
-                  ? <Pill label="✓ Verified" color={P.accent} />
-                  : <Pill label="Pending" color={P.gold} />}
-                {d.parsed && <Pill label="✨ AI Parsed" color={P.teal} />}
-                <button style={{ fontSize: 11, padding: "5px 12px",
-                  background: P.s2, border: "1px solid " + P.border,
-                  borderRadius: 5, cursor: "pointer", fontFamily: "inherit",
-                  color: P.text }}>View</button>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-      <div style={{ border: "2px dashed " + P.border, borderRadius: 10,
-        padding: 22, textAlign: "center", cursor: "pointer", marginTop: 16 }}>
-        <div style={{ fontSize: 14, color: P.muted }}>
-          📎 Drop documents here or click to upload
+
+      {/* ── Filter bar ── */}
+      <div style={{ display:"flex", gap:12, flexWrap:"wrap",
+        alignItems:"flex-end", marginBottom:16 }}>
+        <div>
+          <label style={labelS}>Client ID or Name</label>
+          <input value={filterClient}
+            onChange={e => setFilterClient(e.target.value)}
+            placeholder="e.g. CLT-001 or Suresh"
+            style={{ ...inputS, width:180 }} />
         </div>
-        <div style={{ fontSize: 11, color: P.dim, marginTop: 4 }}>
+        <div>
+          <label style={labelS}>Case Number</label>
+          <input value={filterCase}
+            onChange={e => setFilterCase(e.target.value)}
+            placeholder="e.g. INT-041"
+            style={{ ...inputS, width:150 }} />
+        </div>
+        <div>
+          <label style={labelS}>Document Type</label>
+          <select value={filterType}
+            onChange={e => setFilterType(e.target.value)}
+            style={{ ...inputS, width:160, cursor:"pointer" }}>
+            {docTypes.map(t => (
+              <option key={t} value={t}>
+                {t === "all" ? "All Types" : t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button onClick={() => {
+          setFilterClient(""); setFilterCase(""); setFilterType("all");
+        }} style={{
+          fontSize:11, padding:"7px 14px", borderRadius:7,
+          border:"1px solid " + P.border,
+          background:P.s2, color:P.muted,
+          cursor:"pointer", fontFamily:"inherit",
+        }}>✕ Clear</button>
+      </div>
+
+      {/* ── Upload message ── */}
+      {uploadMsg && (
+        <div style={{
+          fontSize:12, fontWeight:600, padding:"10px 14px",
+          borderRadius:8, marginBottom:12,
+          background: uploadMsg.ok ? P.accentL : P.roseL,
+          color: uploadMsg.ok ? P.accent : P.rose,
+          border:"1px solid " + (uploadMsg.ok
+            ? "rgba(45,106,79,0.2)" : "rgba(166,50,50,0.2)"),
+        }}>{uploadMsg.text}</div>
+      )}
+
+      {/* ── Document list — clean rows like screenshot ── */}
+      {loading && (
+        <div style={{ textAlign:"center", padding:32,
+          color:P.dim, fontSize:13 }}>
+          Loading documents...
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <div style={{
+          textAlign:"center", padding:32, color:P.dim,
+          fontSize:13, background:P.s1,
+          border:"1px solid " + P.border, borderRadius:10,
+        }}>
+          No documents match your filters.
+        </div>
+      )}
+
+      {/* Outer container — single bordered box like screenshot */}
+      {filtered.length > 0 && (
+        <div style={{
+          background:P.s1,
+          border:"1px solid " + P.border,
+          borderRadius:10, overflow:"hidden",
+          marginBottom:16,
+        }}>
+          {filtered.map((d, i) => (
+            <div key={d.id || i} style={{
+              display:"flex", justifyContent:"space-between",
+              alignItems:"center",
+              padding:"13px 18px",
+              borderLeft: "3px solid " + P.accent,
+              borderBottom: i < filtered.length - 1
+                ? "1px solid " + P.border : "none",
+              background: i % 2 === 0 ? P.s1 : P.s2,
+              transition:"background 0.1s",
+            }}
+            onMouseEnter={e =>
+              e.currentTarget.style.background = P.accentL}
+            onMouseLeave={e =>
+              e.currentTarget.style.background =
+                i % 2 === 0 ? P.s1 : P.s2}
+            >
+              {/* Left: icon + name + meta */}
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                {/* File icon */}
+                <div style={{
+                  width:32, height:32, borderRadius:6,
+                  background: P.accentL,
+                  border:"1px solid rgba(45,106,79,0.15)",
+                  display:"flex", alignItems:"center",
+                  justifyContent:"center", fontSize:15, flexShrink:0,
+                }}>📄</div>
+                <div>
+                  {/* Filename + DEMO badge */}
+                  <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                    <span style={{ fontSize:13, fontWeight:700,
+                      color:P.ink }}>
+                      {d.file_name}
+                    </span>
+                    {d.is_mock && (
+                      <span style={{
+                        fontSize:9, fontWeight:700,
+                        padding:"2px 6px", borderRadius:8,
+                        background:P.goldL, color:P.gold,
+                        border:"1px solid rgba(139,105,20,0.25)",
+                        letterSpacing:"0.05em",
+                      }}>DEMO</span>
+                    )}
+                  </div>
+                  {/* Meta row — exactly like screenshot */}
+                  <div style={{ fontSize:11, color:P.dim,
+                    marginTop:2, letterSpacing:"0.01em" }}>
+                    {d.doc_type}
+                    {d.file_size && ` · ${d.file_size}`}
+                    {` · ${fmtDate(d.created_at)}`}
+                    {d.case_number && ` · ${d.case_number}`}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: status pills + buttons */}
+                <div style={{ display: "flex", flexDirection: "column",
+                  gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
+                  
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <StatusPill verified={d.verified} aiParsed={d.ai_parsed} />
+                    
+                    {/* Parse button — only for real docs with a file_url */}
+                    {!d.is_mock && d.file_url && !d.ai_parsed && (
+                      <button
+                        onClick={() => parseDocument(d)}
+                        disabled={parsing === d.id}
+                        style={{
+                          fontSize: 11, padding: "5px 14px",
+                          background: parsing === d.id ? P.border : P.blueL,
+                          border: "1px solid rgba(30,77,140,0.25)",
+                          borderRadius: 5, cursor: parsing === d.id ? "not-allowed" : "pointer",
+                          fontFamily: "inherit", color: P.blue, fontWeight: 600,
+                        }}>
+                        {parsing === d.id ? "Parsing…" : "✨ Parse"}
+                      </button>
+                    )}
+
+                    {/* Expand/collapse parsed data */}
+                    {d.ai_parsed && d.ai_extracted && (
+                      <button
+                        onClick={() => setExpanded(expanded === d.id ? null : d.id)}
+                        style={{
+                          fontSize: 11, padding: "5px 14px",
+                          background: P.accentL,
+                          border: "1px solid rgba(45,106,79,0.2)",
+                          borderRadius: 5, cursor: "pointer",
+                          fontFamily: "inherit", color: P.accent, fontWeight: 600,
+                        }}>
+                        {expanded === d.id ? "Hide ▲" : "View Fields ▼"}
+                      </button>
+                    )}
+                    {/* Verify button — shows after AI parsing, before verification */}
+                    {!d.is_mock && d.ai_parsed && !d.verified && (
+                      <button
+                        onClick={async () => {
+                          await supabase
+                            .from("documents")
+                            .update({ verified: true })
+                            .eq("id", d.id);
+                          await loadDocs();
+                        }}
+                        style={{
+                          fontSize: 11, padding: "5px 14px",
+                          background: P.accentL,
+                          border: "1px solid rgba(45,106,79,0.25)",
+                          borderRadius: 5, cursor: "pointer",
+                          fontFamily: "inherit", color: P.accent, fontWeight: 600,
+                        }}>
+                        ✓ Verify
+                      </button>
+                    )}
+
+                    {/* View file */}
+                    {d.file_url ? (
+                      <a href={d.file_url} target="_blank" rel="noopener noreferrer"
+                        style={{ textDecoration: "none" }}>
+                        <button style={{
+                          fontSize: 11, padding: "5px 14px",
+                          background: P.s1, border: "1px solid " + P.border,
+                          borderRadius: 5, cursor: "pointer",
+                          fontFamily: "inherit", color: P.text,
+                        }}>View</button>
+                      </a>
+                    ) : (
+                      <button disabled style={{
+                        fontSize: 11, padding: "5px 14px",
+                        background: P.s2, border: "1px solid " + P.border,
+                        borderRadius: 5, cursor: "not-allowed",
+                        fontFamily: "inherit", color: P.dim,
+                      }}>View</button>
+                    )}
+                  </div>
+
+                  {/* Expanded extracted fields */}
+                  {expanded === d.id && d.ai_extracted && (
+                    <div style={{ width: "100%", maxWidth: 500 }}>
+                      <ExtractedFields data={d.ai_extracted} />
+                    </div>
+                  )}
+                </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Drop zone ── */}
+      <input ref={fileRef} type="file" multiple
+        style={{ display:"none" }} onChange={onFileSelect} />
+
+      <div
+        onClick={() => fileRef.current?.click()}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        style={{
+          border:"2px dashed " + (dragging ? P.accent : P.border),
+          borderRadius:10, padding:28, textAlign:"center",
+          cursor:"pointer", transition:"all 0.15s",
+          background: dragging ? P.accentL : "transparent",
+        }}
+      >
+        <div style={{ fontSize:22, marginBottom:8 }}>📎</div>
+        <div style={{ fontSize:14,
+          color: dragging ? P.accent : P.muted,
+          fontWeight: dragging ? 600 : 400 }}>
+          {dragging
+            ? "Drop to upload"
+            : "Drop documents here or click to upload"}
+        </div>
+        <div style={{ fontSize:11, color:P.dim, marginTop:4 }}>
           PDF, JPG, PNG supported · AI will auto-extract key fields
         </div>
       </div>
+
+      {/* ── Upload slide-in panel ── */}
+      {showForm && (
+        <div style={{
+          position:"fixed", inset:0, zIndex:1000,
+          background:"rgba(0,0,0,0.4)",
+          display:"flex", alignItems:"center",
+          justifyContent:"flex-end",
+        }} onClick={() => setShowForm(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width:420, height:"100vh", background:P.s1,
+            borderLeft:"1px solid " + P.border,
+            display:"flex", flexDirection:"column",
+            boxShadow:"-8px 0 32px rgba(0,0,0,0.12)",
+          }}>
+            <div style={{
+              padding:"20px 24px 16px",
+              borderBottom:"1px solid " + P.border,
+              background:P.accentL,
+              display:"flex", justifyContent:"space-between",
+              alignItems:"center",
+            }}>
+              <div>
+                <div style={{ fontSize:15, fontWeight:700, color:P.accent }}>
+                  Upload Documents
+                </div>
+                <div style={{ fontSize:11, color:P.muted, marginTop:2 }}>
+                  {pendingFiles.length} file
+                  {pendingFiles.length !== 1 ? "s" : ""} selected
+                </div>
+              </div>
+              <button onClick={() => setShowForm(false)} style={{
+                background:"none", border:"none", fontSize:20,
+                cursor:"pointer", color:P.muted, lineHeight:1,
+              }}>×</button>
+            </div>
+
+            <div style={{
+              padding:"12px 24px",
+              borderBottom:"1px solid " + P.border,
+              background:P.s2,
+            }}>
+              {pendingFiles.map((f, i) => (
+                <div key={i} style={{
+                  fontSize:11.5, color:P.text, padding:"4px 0",
+                  borderBottom: i < pendingFiles.length - 1
+                    ? "1px solid " + P.border : "none",
+                }}>
+                  📄 {f.name}
+                  <span style={{ color:P.dim, marginLeft:8 }}>
+                    {(f.size / 1024).toFixed(0)} KB
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ padding:"20px 24px", flex:1, overflowY:"auto" }}>
+              {[
+                { label:"Client ID",     field:"client_id",
+                  placeholder:"e.g. CLT-001" },
+                { label:"Client Name *", field:"client_name",
+                  placeholder:"e.g. Suresh Gowda" },
+                { label:"Case Number",   field:"case_number",
+                  placeholder:"e.g. OS 1241/2024" },
+              ].map(({ label: lbl, field, placeholder }) => (
+                <div key={field} style={{ marginBottom:14 }}>
+                  <label style={labelS}>{lbl}</label>
+                  <input
+                    value={(uploadForm as any)[field]}
+                    onChange={e => setUploadForm(prev =>
+                      ({ ...prev, [field]: e.target.value }))}
+                    placeholder={placeholder}
+                    style={{ ...inputS, width:"100%" }}
+                  />
+                </div>
+              ))}
+              <div style={{ marginBottom:14 }}>
+                <label style={labelS}>Document Type</label>
+                <select
+                  value={uploadForm.doc_type}
+                  onChange={e => setUploadForm(prev =>
+                    ({ ...prev, doc_type: e.target.value }))}
+                  style={{ ...inputS, width:"100%", cursor:"pointer" }}>
+                  <option value="">— Auto-detect from file —</option>
+                  {["SALE DEED","GIFT DEED","ENCUMBRANCE","LEGAL NOTICE",
+                    "CHEQUE","PLAINT","WRITTEN STATEMENT","AFFIDAVIT",
+                    "VAKALATNAMA","ORDER","JUDGMENT","OTHER",
+                  ].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ padding:"16px 24px",
+              borderTop:"1px solid " + P.border,
+              display:"flex", gap:10 }}>
+              <button onClick={uploadFiles} disabled={uploading} style={{
+                flex:1, padding:"10px",
+                background: uploading ? P.border : P.accent,
+                color: uploading ? P.muted : "#fff",
+                border:"none", borderRadius:8,
+                fontSize:13, fontWeight:700,
+                cursor: uploading ? "not-allowed" : "pointer",
+                fontFamily:"inherit",
+              }}>
+                {uploading ? "Uploading..." : "Upload Files"}
+              </button>
+              <button onClick={() => setShowForm(false)} style={{
+                padding:"10px 20px", background:P.s2, color:P.text,
+                border:"1px solid " + P.border, borderRadius:8,
+                fontSize:13, cursor:"pointer", fontFamily:"inherit",
+              }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3567,7 +4755,7 @@ export default function App() {
         : <CaseList nav={nav} />;
       case "deadlines":     return <Deadlines />;
       case "calendar":      return <CalendarView />;
-      case "documents":     return <Documents />;
+      case "documents": return <Documents detail={detail} />;
       case "ai-drafts":     return <AIDrafts />;
       case "tools":         return <Tools />;
       default:              return <Overview nav={nav} entries={entries} />;
